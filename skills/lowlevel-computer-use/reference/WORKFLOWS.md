@@ -74,7 +74,10 @@ hide_window { "window_title": "My App" }     // then tuck it away
 App on a Windows headless desktop:
 
 ```jsonc
-show_headless_desktop { "name": "work" }     // whole desktop becomes interactive
+show_headless_desktop {
+  "name": "work",
+  "instruction": "Sign in, then tell the agent you are done."
+}                                             // non-dismissible banner + emergency exit
 hide_headless_desktop { "name": "work" }     // switch back after login
 ```
 

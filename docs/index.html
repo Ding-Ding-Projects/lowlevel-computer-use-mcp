@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07111f">
+    <meta name="description" content="Run real GUI apps on invisible desktops and automate them without stealing focus.">
+    <meta property="og:title" content="lowlevel-computer-use-mcp — Headless desktop automation">
+    <meta property="og:description" content="Real GUI apps. Zero desktop clutter. Windows off-screen desktops and Linux Xvfb, exposed through MCP.">
+    <meta property="og:image" content="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/og.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/">
+    <link rel="stylesheet" href="styles.css">
+    <title>lowlevel-computer-use-mcp — Headless desktop automation</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="lowlevel-computer-use-mcp home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>lowlevel-computer-use-mcp</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#how-it-works">How it works</a>
+        <a href="#capabilities">Capabilities</a>
+        <a class="nav-cta" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">View on GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Headless desktop automation for MCP</p>
+          <h1>Real GUI apps.<br><em>Zero desktop clutter.</em></h1>
+          <p class="lede">Run full desktop applications on an invisible Windows desktop or Linux virtual display. Agents can see, click, type, and capture them without hijacking your screen.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp#quick-start-gui-installer--fully-automatic">Get started</a>
+            <a class="button secondary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">Explore the source <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="platforms" aria-label="Supported platforms">
+            <span>Windows off-screen desktop</span>
+            <span>Linux Xvfb</span>
+            <span>53 MCP tools</span>
+          </div>
+        </div>
+
+        <div class="desktop-demo" aria-label="Illustration of an application running on a headless desktop">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="desktop-card">
+            <div class="desktop-label"><span></span> OFF-SCREEN DESKTOP · ACTIVE</div>
+            <div class="app-window">
+              <div class="window-bar">
+                <div class="traffic"><i></i><i></i><i></i></div>
+                <span>work · headless</span>
+              </div>
+              <div class="safety-banner">
+                <strong>AGENT TEMPORARY DESKTOP</strong>
+                <span>Complete the sign-in, then tell the agent.</span>
+                <b>EMERGENCY EXIT</b>
+              </div>
+              <div class="app-body">
+                <aside>
+                  <i></i><i></i><i></i><i></i>
+                </aside>
+                <div class="workspace">
+                  <div class="workspace-title"><span></span><span></span></div>
+                  <div class="terminal-line"><b>$</b> launch_on_headless_desktop</div>
+                  <div class="terminal-line muted"><b>✓</b> GUI ready · visible to agent only</div>
+                  <div class="progress"><span></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="agent-status"><span class="pulse"></span><strong>Agent working</strong><small>Your desktop stays yours</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="promise" aria-label="Core promise">
+        <p>The desktop is now a background runtime—not a shared cursor.</p>
+      </section>
+
+      <section class="section" id="how-it-works">
+        <div class="section-heading">
+          <p class="eyebrow"><span></span> How it works</p>
+          <h2>Invisible by default.<br>Interactive when needed.</h2>
+          <p>Keep automation off your visible desktop from launch through verification. If a login or human-only step appears, reveal it safely and return it to the background.</p>
+        </div>
+        <ol class="steps">
+          <li><span>01</span><div><h3>Create</h3><p>Start an isolated off-screen desktop on Windows or an Xvfb display on Linux.</p></div></li>
+          <li><span>02</span><div><h3>Launch & automate</h3><p>Run real GUI apps, target their windows directly, and capture results without focus stealing.</p></div></li>
+          <li><span>03</span><div><h3>Reveal safely</h3><p>Show the desktop only for a human step, with a non-dismissible instruction banner and emergency exit.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="section capabilities" id="capabilities">
+        <div class="section-heading compact">
+          <p class="eyebrow"><span></span> Built for capable agents</p>
+          <h2>Low-level control,<br>without the interruption.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="featured">
+            <div class="feature-icon">◫</div>
+            <p class="tag">The main event</p>
+            <h3>Headless-with-GUI</h3>
+            <p>Unlike browser-only automation, full native applications run with a real interface—just not on the desktop you are using.</p>
+          </article>
+          <article><div class="feature-icon">◎</div><h3>Background targeting</h3><p>Click, type, and send keys to a specific window without bringing it forward.</p></article>
+          <article><div class="feature-icon">▣</div><h3>Per-window capture</h3><p>Inspect an app even when it is occluded, unfocused, or running off-screen.</p></article>
+          <article><div class="feature-icon">⌁</div><h3>Safe human handoff</h3><p>Clear instructions, a persistent top banner, and a one-click emergency return.</p></article>
+          <article><div class="feature-icon">⌘</div><h3>Cross-platform</h3><p>Win32 off-screen desktops on Windows and Xvfb virtual displays on Linux.</p></article>
+        </div>
+      </section>
+
+      <section class="cta-panel">
+        <p class="eyebrow"><span></span> Give agents a desktop of their own</p>
+        <h2>Keep your screen.<br>Let the agent work.</h2>
+        <div class="install-command"><code>uv run lowlevel-computer-use-mcp-installer</code><span>one-command setup</span></div>
+        <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">Open the GitHub repository <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <footer>
+      <span>lowlevel-computer-use-mcp</span>
+      <span>Real desktop control for MCP agents.</span>
+      <a href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">GitHub ↗</a>
+    </footer>
+  </body>
+</html>

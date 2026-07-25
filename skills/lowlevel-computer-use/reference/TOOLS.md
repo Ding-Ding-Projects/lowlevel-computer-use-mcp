@@ -202,8 +202,10 @@ No params. → `{ok, recording, path, frames, elapsed_seconds}`.
 - `name` str. Close apps on it first. → `{ok, name, closed}`.
 
 ### `show_headless_desktop` (W)
-- `name` str — switch the live screen TO this off-screen desktop (for an interactive
-  login). → `{ok, name, visible:true, note}`.
+- `name` str, `instruction` str (default "Complete the requested manual step.") — switch
+  the live screen TO this off-screen desktop (for an interactive login). A topmost,
+  non-dismissible banner shows the instruction and an EMERGENCY EXIT button that
+  restores the normal desktop. → `{ok, name, visible:true, safety_banner:true, note}`.
 
 ### `hide_headless_desktop` (W)
 - `name` str — switch the live screen back to the normal desktop. → `{ok, restored:true}`.

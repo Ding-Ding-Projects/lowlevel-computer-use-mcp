@@ -107,7 +107,11 @@ except Exception:  # pragma: no cover
 
 IS_WINDOWS = os.name == "nt"
 IS_LINUX = sys.platform.startswith("linux")
-_DEFAULT_MOUSE_MOVE_DURATION = max(0.0, min(float(os.environ.get("LOWLEVEL_MOUSE_MOVE_DURATION", "0.25")), 10.0))
+_MIN_MOUSE_MOVE_DURATION = 0.05
+_DEFAULT_MOUSE_MOVE_DURATION = max(
+    _MIN_MOUSE_MOVE_DURATION,
+    min(float(os.environ.get("LOWLEVEL_MOUSE_MOVE_DURATION", "0.25")), 10.0),
+)
 _MOUSE_MOVE_HZ = max(15, min(int(os.environ.get("LOWLEVEL_MOUSE_MOVE_HZ", "90")), 240))
 _MOUSE_MOVE_STEP_PX = max(4, min(int(os.environ.get("LOWLEVEL_MOUSE_MOVE_STEP_PX", "22")), 120))
 
@@ -132,6 +136,37 @@ def _smooth_duration(requested: Optional[float], instant: bool = False) -> float
     return _DEFAULT_MOUSE_MOVE_DURATION
 
 
+def _smooth_mouse_path(
+    start_x: int,
+    start_y: int,
+    target_x: int,
+    target_y: int,
+    duration: float,
+) -> list[tuple[int, int]]:
+    distance = math.hypot(target_x - start_x, target_y - start_y)
+    if duration <= 0 or distance < 1:
+        return [(target_x, target_y)]
+
+    steps_by_time = max(2, int(math.ceil(duration * _MOUSE_MOVE_HZ)))
+    steps_by_distance = max(2, int(math.ceil(distance / _MOUSE_MOVE_STEP_PX)))
+    steps = min(360, max(steps_by_time, steps_by_distance))
+    path: list[tuple[int, int]] = []
+    last_xy: tuple[int, int] | None = None
+
+    for i in range(1, steps + 1):
+        t = i / steps
+        eased = t * t * (3 - 2 * t)
+        nx = int(round(start_x + (target_x - start_x) * eased))
+        ny = int(round(start_y + (target_y - start_y) * eased))
+        if (nx, ny) != last_xy:
+            path.append((nx, ny))
+            last_xy = (nx, ny)
+
+    if not path or path[-1] != (target_x, target_y):
+        path.append((target_x, target_y))
+    return path
+
+
 def _smooth_mouse_move_to(x: int, y: int, *, duration: Optional[float] = None, instant: bool = False) -> None:
     """Move the OS cursor in visible steps instead of relying on backend tweening.
 
@@ -150,26 +185,15 @@ def _smooth_mouse_move_to(x: int, y: int, *, duration: Optional[float] = None, i
         pyautogui.moveTo(target_x, target_y, duration=0)
         return
 
-    steps_by_time = max(2, int(math.ceil(resolved_duration * _MOUSE_MOVE_HZ)))
-    steps_by_distance = max(2, int(math.ceil(distance / _MOUSE_MOVE_STEP_PX)))
-    steps = min(360, max(steps_by_time, steps_by_distance))
+    path = _smooth_mouse_path(start_x, start_y, target_x, target_y, resolved_duration)
     started = time.perf_counter()
-    last_xy: tuple[int, int] | None = None
 
-    for i in range(1, steps + 1):
-        t = i / steps
-        eased = t * t * (3 - 2 * t)
-        nx = int(round(start_x + (target_x - start_x) * eased))
-        ny = int(round(start_y + (target_y - start_y) * eased))
-        if (nx, ny) != last_xy:
-            pyautogui.moveTo(nx, ny, duration=0)
-            last_xy = (nx, ny)
-        wake_at = started + resolved_duration * t
+    for index, (nx, ny) in enumerate(path, start=1):
+        pyautogui.moveTo(nx, ny, duration=0)
+        wake_at = started + resolved_duration * (index / len(path))
         delay = wake_at - time.perf_counter()
         if delay > 0:
             time.sleep(delay)
-
-    pyautogui.moveTo(target_x, target_y, duration=0)
 
 
 # --------------------------------------------------------------------------- #
@@ -1863,6 +1887,15 @@ class HeadlessDesktopInput(BaseModel):
     )
 
 
+class ShowHeadlessDesktopInput(HeadlessDesktopInput):
+    instruction: str = Field(
+        default="Complete the requested manual step.",
+        description="Short instruction displayed in the non-dismissible top safety banner",
+        min_length=1,
+        max_length=240,
+    )
+
+
 @mcp.tool(
     name="create_headless_desktop",
     annotations={
@@ -2088,23 +2121,26 @@ async def hide_window(params: HideWindowInput) -> str:
         "openWorldHint": True,
     },
 )
-async def show_headless_desktop(params: HeadlessDesktopInput) -> str:
+async def show_headless_desktop(params: ShowHeadlessDesktopInput) -> str:
     """Temporarily switch the live screen to a headless desktop for human interaction.
 
     The entire off-screen desktop (and the apps running on it) becomes interactive
-    and visible, so a person can complete a LOGIN or any manual step. Call
-    `hide_headless_desktop` to switch back to the normal desktop afterwards.
+    and visible, so a person can complete a LOGIN or any manual step. A topmost,
+    non-dismissible banner explains what to do and provides an EMERGENCY EXIT button
+    that immediately restores the normal desktop. Call `hide_headless_desktop` to
+    switch back normally afterwards.
 
     Args:
-        params (HeadlessDesktopInput): the off-screen desktop name.
+        params (ShowHeadlessDesktopInput): desktop name and banner instruction.
 
     Returns:
-        str: JSON {"ok": true, "name": "...", "visible": true, "note": "..."}.
+        str: JSON {"ok": true, "name": "...", "visible": true,
+        "safety_banner": true, "note": "..."}.
     """
     if (e := _require(winio, "winio (Windows)")):
         return e
     try:
-        return _ok(**winio.show_desktop(params.name))
+        return _ok(**winio.show_desktop(params.name, params.instruction))
     except winio.WinIOError as exc:
         return _err(str(exc))
 

@@ -26,6 +26,7 @@ Caveats (inherent to message-based injection, documented for honesty):
 from __future__ import annotations
 
 import ctypes
+import threading
 from ctypes import wintypes
 from typing import Any, Callable, Optional
 
@@ -154,7 +155,9 @@ def find_top_window(title: Optional[str], handle: Optional[int]) -> int:
     """Resolve a top-level window handle by exact handle or title substring."""
     if handle is not None:
         if not user32.IsWindow(handle):
-            raise WinIOError(f"No window with handle {handle}.")
+            # Not on this thread's desktop — accept it if ANY desktop owns it
+            # (headless-desktop windows); raises WinIOError otherwise.
+            return run_on_window_desktop(int(handle), lambda: int(handle))
         return int(handle)
     if not title:
         raise WinIOError("Provide a window title or handle.")
@@ -175,7 +178,14 @@ def find_top_window(title: Optional[str], handle: Optional[int]) -> int:
 
 
 def list_child_windows(hwnd: int) -> list[dict[str, Any]]:
-    """Enumerate child controls of a window with class, text and client rect."""
+    """Enumerate child controls of a window with class, text and client rect.
+
+    Works for windows on headless desktops too (cross-desktop dispatch).
+    """
+    return run_on_window_desktop(int(hwnd), lambda: _list_child_windows_impl(hwnd))
+
+
+def _list_child_windows_impl(hwnd: int) -> list[dict[str, Any]]:
     children: list[dict[str, Any]] = []
     top_rect = wintypes.RECT()
     user32.GetWindowRect(hwnd, ctypes.byref(top_rect))
@@ -250,6 +260,90 @@ def _deepest_child_at(top: int, x: int, y: int) -> tuple[int, int, int]:
 
 
 # --------------------------------------------------------------------------- #
+# Cross-desktop dispatch
+#
+# USER hwnd operations (IsWindow, GetWindowRect, PostMessage, PrintWindow, ...)
+# only resolve windows on the *calling thread's* desktop. Windows launched on a
+# headless desktop (create_desktop / launch_on_desktop) are therefore invisible
+# to a caller attached to the default desktop, even though the hwnd itself is
+# session-valid. run_on_window_desktop() fixes that transparently: if the hwnd
+# does not resolve on the current desktop, it retries the operation on a fresh
+# worker thread attached (SetThreadDesktop) to each desktop of this window
+# station until one owns the hwnd. Fresh threads are required because
+# SetThreadDesktop fails on threads that already own windows/hooks.
+# --------------------------------------------------------------------------- #
+user32.GetProcessWindowStation.restype = wintypes.HANDLE
+DESKTOPENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.LPWSTR, LPARAM)
+user32.EnumDesktopsW.argtypes = [wintypes.HANDLE, DESKTOPENUMPROC, LPARAM]
+user32.SetThreadDesktop.argtypes = [HDESK]
+user32.SetThreadDesktop.restype = wintypes.BOOL
+
+# Desktop handles opened for cross-desktop dispatch. Kept for the process
+# lifetime on purpose: a desktop handle must outlive any thread attached to it,
+# and the handles are tiny (the CLI is one-shot; the server benefits from reuse).
+_XDESK_CACHE: dict[str, int] = {}
+
+
+def _enum_desktop_names() -> list[str]:
+    """Names of all desktops in this process's window station."""
+    names: list[str] = []
+
+    @DESKTOPENUMPROC
+    def cb(name, _lparam):
+        if name:
+            names.append(str(name))
+        return True
+
+    user32.EnumDesktopsW(user32.GetProcessWindowStation(), cb, 0)
+    return names
+
+
+def run_on_window_desktop(hwnd: int, fn: Callable[[], Any]) -> Any:
+    """Run fn() attached to whichever desktop owns `hwnd`.
+
+    Fast path: the hwnd resolves on the current thread's desktop -> call fn()
+    inline. Slow path: try each desktop in the window station on a dedicated
+    worker thread; the first desktop where IsWindow(hwnd) succeeds runs fn()
+    there (its result / exception is propagated). Raises WinIOError when the
+    hwnd resolves on no desktop at all.
+    """
+    if user32.IsWindow(hwnd):
+        return fn()
+
+    for name in _enum_desktop_names():
+        outcome: dict[str, Any] = {}
+
+        def worker(desk_name=name):
+            hd = _XDESK_CACHE.get(desk_name)
+            if not hd:
+                hd = user32.OpenDesktopW(desk_name, 0, False, GENERIC_ALL)
+                if not hd:
+                    return
+                _XDESK_CACHE[desk_name] = int(hd)
+            if not user32.SetThreadDesktop(hd):
+                return
+            if not user32.IsWindow(hwnd):
+                return
+            outcome["found"] = True
+            try:
+                outcome["result"] = fn()
+            except BaseException as exc:  # propagate to the caller thread
+                outcome["error"] = exc
+
+        t = threading.Thread(target=worker, daemon=True)
+        t.start()
+        t.join(timeout=60)
+        if outcome.get("found"):
+            if "error" in outcome:
+                raise outcome["error"]
+            return outcome.get("result")
+
+    raise WinIOError(
+        f"No window with handle {hwnd} on any desktop of this window station."
+    )
+
+
+# --------------------------------------------------------------------------- #
 # Background mouse / keyboard
 # --------------------------------------------------------------------------- #
 def _lparam_xy(x: int, y: int) -> int:
@@ -267,8 +361,12 @@ def send_click(top: int, x: int, y: int, button: str = "left", double: bool = Fa
     """Post a mouse click to the deepest control at client point (x, y) of `top`.
 
     x, y are in client coordinates of the top-level window. The window does not
-    need to be focused or visible.
+    need to be focused or visible — headless-desktop windows work too.
     """
+    return run_on_window_desktop(int(top), lambda: _send_click_impl(top, x, y, button, double))
+
+
+def _send_click_impl(top: int, x: int, y: int, button: str, double: bool) -> dict[str, Any]:
     down, up, dbl, mk = _BTN[button]
     target, cx, cy = _deepest_child_at(top, x, y)
     lp = _lparam_xy(cx, cy)
@@ -283,18 +381,24 @@ def send_click(top: int, x: int, y: int, button: str = "left", double: bool = Fa
 
 def send_text(hwnd: int, text: str) -> dict[str, Any]:
     """Post each character as WM_CHAR to a window (typically a focused control)."""
-    for ch in text:
-        user32.PostMessageW(hwnd, WM_CHAR, ord(ch), 0)
-    return {"target_hwnd": int(hwnd), "chars": len(text)}
+    def _impl() -> dict[str, Any]:
+        for ch in text:
+            user32.PostMessageW(hwnd, WM_CHAR, ord(ch), 0)
+        return {"target_hwnd": int(hwnd), "chars": len(text)}
+
+    return run_on_window_desktop(int(hwnd), _impl)
 
 
 def set_control_text(hwnd: int, text: str) -> dict[str, Any]:
     """Set a control's text directly via WM_SETTEXT (reliable for edit controls)."""
-    buf = ctypes.create_unicode_buffer(text)
-    res = user32.SendMessageTimeoutW(
-        hwnd, WM_SETTEXT, 0, ctypes.addressof(buf), 0, 2000, ctypes.byref(ctypes.c_size_t())
-    )
-    return {"target_hwnd": int(hwnd), "ok": bool(res), "text_len": len(text)}
+    def _impl() -> dict[str, Any]:
+        buf = ctypes.create_unicode_buffer(text)
+        res = user32.SendMessageTimeoutW(
+            hwnd, WM_SETTEXT, 0, ctypes.addressof(buf), 0, 2000, ctypes.byref(ctypes.c_size_t())
+        )
+        return {"target_hwnd": int(hwnd), "ok": bool(res), "text_len": len(text)}
+
+    return run_on_window_desktop(int(hwnd), _impl)
 
 
 _VK = {
@@ -335,14 +439,17 @@ def send_keys(hwnd: int, keys: list[str]) -> dict[str, Any]:
     are unreliable for apps that check physical key state - prefer set_control_text
     for text entry.
     """
-    vks = [_vk_for(k) for k in keys]
-    for vk in vks:
-        down, _ = _key_lparams(vk)
-        user32.PostMessageW(hwnd, WM_KEYDOWN, vk, down)
-    for vk in reversed(vks):
-        _, up = _key_lparams(vk)
-        user32.PostMessageW(hwnd, WM_KEYUP, vk, up)
-    return {"target_hwnd": int(hwnd), "keys": keys}
+    def _impl() -> dict[str, Any]:
+        vks = [_vk_for(k) for k in keys]
+        for vk in vks:
+            down, _ = _key_lparams(vk)
+            user32.PostMessageW(hwnd, WM_KEYDOWN, vk, down)
+        for vk in reversed(vks):
+            _, up = _key_lparams(vk)
+            user32.PostMessageW(hwnd, WM_KEYUP, vk, up)
+        return {"target_hwnd": int(hwnd), "keys": keys}
+
+    return run_on_window_desktop(int(hwnd), _impl)
 
 
 # --------------------------------------------------------------------------- #
@@ -371,8 +478,13 @@ class BITMAPINFO(ctypes.Structure):
 def capture_window(hwnd: int, client_only: bool = False):
     """Capture a window via PrintWindow into a PIL Image, even if unfocused/occluded.
 
-    Returns (PIL.Image, rendered_ok: bool). Requires Pillow.
+    Returns (PIL.Image, rendered_ok: bool). Requires Pillow. Windows living on a
+    headless desktop are captured via cross-desktop dispatch.
     """
+    return run_on_window_desktop(int(hwnd), lambda: _capture_window_impl(hwnd, client_only))
+
+
+def _capture_window_impl(hwnd: int, client_only: bool = False):
     from PIL import Image  # local import keeps the dependency optional
 
     if not user32.IsWindow(hwnd):
@@ -560,6 +672,40 @@ SW_MINIMIZE = 6
 SW_RESTORE = 9
 DESKTOP_SWITCHDESKTOP = 0x0100
 
+# Safety banner shown whenever a headless desktop becomes interactive.
+WM_CLOSE = 0x0010
+WM_DESTROY = 0x0002
+WM_COMMAND = 0x0111
+WM_SETFONT = 0x0030
+WS_POPUP = 0x80000000
+WS_VISIBLE = 0x10000000
+WS_CHILD = 0x40000000
+WS_EX_TOPMOST = 0x00000008
+WS_EX_TOOLWINDOW = 0x00000080
+SS_CENTER = 0x00000001
+SS_CENTERIMAGE = 0x00000200
+BS_DEFPUSHBUTTON = 0x00000001
+DEFAULT_GUI_FONT = 17
+COLOR_INFOBK = 24
+EMERGENCY_EXIT_CONTROL_ID = 0xE911
+
+WNDPROC = ctypes.WINFUNCTYPE(LRESULT, HWND, wintypes.UINT, WPARAM, LPARAM)
+
+
+class WNDCLASSW(ctypes.Structure):
+    _fields_ = [
+        ("style", wintypes.UINT),
+        ("lpfnWndProc", WNDPROC),
+        ("cbClsExtra", ctypes.c_int),
+        ("cbWndExtra", ctypes.c_int),
+        ("hInstance", wintypes.HINSTANCE),
+        ("hIcon", wintypes.HICON),
+        ("hCursor", wintypes.HANDLE),
+        ("hbrBackground", wintypes.HBRUSH),
+        ("lpszMenuName", wintypes.LPCWSTR),
+        ("lpszClassName", wintypes.LPCWSTR),
+    ]
+
 user32.ShowWindow.argtypes = [HWND, ctypes.c_int]
 user32.ShowWindow.restype = wintypes.BOOL
 user32.SetForegroundWindow.argtypes = [HWND]
@@ -568,9 +714,206 @@ user32.OpenInputDesktop.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWOR
 user32.OpenInputDesktop.restype = HDESK
 user32.SwitchDesktop.argtypes = [HDESK]
 user32.SwitchDesktop.restype = wintypes.BOOL
+user32.RegisterClassW.argtypes = [ctypes.POINTER(WNDCLASSW)]
+user32.RegisterClassW.restype = wintypes.ATOM
+user32.UnregisterClassW.argtypes = [wintypes.LPCWSTR, wintypes.HINSTANCE]
+user32.CreateWindowExW.argtypes = [
+    wintypes.DWORD,
+    wintypes.LPCWSTR,
+    wintypes.LPCWSTR,
+    wintypes.DWORD,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.c_int,
+    HWND,
+    wintypes.HMENU,
+    wintypes.HINSTANCE,
+    wintypes.LPVOID,
+]
+user32.CreateWindowExW.restype = HWND
+user32.DefWindowProcW.argtypes = [HWND, wintypes.UINT, WPARAM, LPARAM]
+user32.DefWindowProcW.restype = LRESULT
+user32.DestroyWindow.argtypes = [HWND]
+user32.GetMessageW.argtypes = [ctypes.POINTER(wintypes.MSG), HWND, wintypes.UINT, wintypes.UINT]
+user32.GetMessageW.restype = wintypes.BOOL
+user32.TranslateMessage.argtypes = [ctypes.POINTER(wintypes.MSG)]
+user32.DispatchMessageW.argtypes = [ctypes.POINTER(wintypes.MSG)]
+user32.PostQuitMessage.argtypes = [ctypes.c_int]
+user32.GetSystemMetrics.argtypes = [ctypes.c_int]
+gdi32.GetStockObject.argtypes = [ctypes.c_int]
+gdi32.GetStockObject.restype = wintypes.HGDIOBJ
+kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 
 # Remembers the input desktop we left so hide_desktop can switch back.
 _saved_input_desktop: Optional[int] = None
+_desktop_switch_lock = threading.RLock()
+
+
+class _HeadlessSafetyBanner:
+    """Non-dismissible top banner hosted directly on a headless Win32 desktop."""
+
+    def __init__(self, desktop_name: str, instruction: str) -> None:
+        self.desktop_name = desktop_name
+        self.instruction = instruction
+        self.ready = threading.Event()
+        self.allow_close = threading.Event()
+        self.error: Optional[BaseException] = None
+        self.hwnd: Optional[int] = None
+        self._thread = threading.Thread(
+            target=self._run,
+            name=f"headless-safety-banner-{desktop_name}",
+            daemon=True,
+        )
+
+    def start(self) -> None:
+        self._thread.start()
+        if not self.ready.wait(timeout=5):
+            raise WinIOError("Timed out while creating the headless desktop safety banner.")
+        if self.error is not None:
+            raise WinIOError(f"Could not create the headless desktop safety banner: {self.error}")
+
+    def close(self) -> None:
+        self.allow_close.set()
+        if self.hwnd:
+            user32.PostMessageW(self.hwnd, WM_CLOSE, 0, 0)
+        if threading.current_thread() is not self._thread:
+            self._thread.join(timeout=2)
+
+    def _run(self) -> None:
+        hdesk = None
+        hinstance = kernel32.GetModuleHandleW(None)
+        class_name = f"LowLevelCUSafetyBanner_{id(self):x}"
+
+        @WNDPROC
+        def window_proc(hwnd: HWND, message: int, wparam: int, lparam: int) -> int:
+            if message == WM_COMMAND and (int(wparam) & 0xFFFF) == EMERGENCY_EXIT_CONTROL_ID:
+                try:
+                    _restore_input_desktop()
+                except BaseException:
+                    # Stay visible and usable if Windows refuses the switch; removing
+                    # the only escape control would leave the user stranded.
+                    return 0
+                self.allow_close.set()
+                user32.DestroyWindow(hwnd)
+                return 0
+            if message == WM_CLOSE:
+                # Deliberately ignore Alt+F4 and close requests. Only normal cleanup or
+                # the emergency-exit button sets allow_close first.
+                if self.allow_close.is_set():
+                    user32.DestroyWindow(hwnd)
+                return 0
+            if message == WM_DESTROY:
+                user32.PostQuitMessage(0)
+                return 0
+            return int(user32.DefWindowProcW(hwnd, message, wparam, lparam))
+
+        try:
+            hdesk = user32.OpenDesktopW(self.desktop_name, 0, False, GENERIC_ALL)
+            _check(hdesk, f"OpenDesktopW('{self.desktop_name}') for safety banner")
+            _check(user32.SetThreadDesktop(hdesk), "SetThreadDesktop(safety banner)")
+
+            window_class = WNDCLASSW()
+            window_class.lpfnWndProc = window_proc
+            window_class.hInstance = hinstance
+            window_class.hbrBackground = wintypes.HBRUSH(COLOR_INFOBK + 1)
+            window_class.lpszClassName = class_name
+            _check(user32.RegisterClassW(ctypes.byref(window_class)), "RegisterClassW(safety banner)")
+
+            width = max(640, user32.GetSystemMetrics(0))
+            height = 72
+            hwnd = user32.CreateWindowExW(
+                WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
+                class_name,
+                "Agent desktop instructions",
+                WS_POPUP | WS_VISIBLE,
+                0,
+                0,
+                width,
+                height,
+                None,
+                None,
+                hinstance,
+                None,
+            )
+            _check(hwnd, "CreateWindowExW(safety banner)")
+            self.hwnd = int(hwnd)
+
+            message = (
+                "AGENT TEMPORARY DESKTOP — "
+                + self.instruction
+                + "  Tell the agent when finished."
+            )
+            label_width = max(300, width - 220)
+            label = user32.CreateWindowExW(
+                0,
+                "STATIC",
+                message,
+                WS_CHILD | WS_VISIBLE | SS_CENTER | SS_CENTERIMAGE,
+                8,
+                8,
+                label_width,
+                56,
+                hwnd,
+                None,
+                hinstance,
+                None,
+            )
+            _check(label, "CreateWindowExW(safety banner label)")
+            button = user32.CreateWindowExW(
+                0,
+                "BUTTON",
+                "EMERGENCY EXIT",
+                WS_CHILD | WS_VISIBLE | BS_DEFPUSHBUTTON,
+                width - 200,
+                16,
+                184,
+                40,
+                hwnd,
+                wintypes.HMENU(EMERGENCY_EXIT_CONTROL_ID),
+                hinstance,
+                None,
+            )
+            _check(button, "CreateWindowExW(emergency exit button)")
+            font = gdi32.GetStockObject(DEFAULT_GUI_FONT)
+            user32.SendMessageW(label, WM_SETFONT, font, 1)
+            user32.SendMessageW(button, WM_SETFONT, font, 1)
+            self.ready.set()
+
+            msg = wintypes.MSG()
+            while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
+                user32.TranslateMessage(ctypes.byref(msg))
+                user32.DispatchMessageW(ctypes.byref(msg))
+        except BaseException as exc:
+            self.error = exc
+            self.ready.set()
+        finally:
+            self.hwnd = None
+            user32.UnregisterClassW(class_name, hinstance)
+            if hdesk:
+                user32.CloseDesktop(hdesk)
+
+
+_safety_banner: Optional[_HeadlessSafetyBanner] = None
+
+
+def _restore_input_desktop() -> None:
+    """Return to the saved input desktop without manipulating the banner."""
+    global _saved_input_desktop
+    with _desktop_switch_lock:
+        target = _saved_input_desktop
+        opened_default = False
+        if target is None:
+            target = user32.OpenDesktopW("Default", 0, False, GENERIC_ALL)
+            _check(target, "OpenDesktopW('Default')")
+            opened_default = True
+        _check(user32.SwitchDesktop(target), "SwitchDesktop(restore)")
+        if _saved_input_desktop is not None:
+            user32.CloseDesktop(_saved_input_desktop)
+            _saved_input_desktop = None
+        elif opened_default:
+            user32.CloseDesktop(target)
 
 
 def show_window(hwnd: int) -> dict[str, Any]:
@@ -595,38 +938,56 @@ def hide_window(hwnd: int, minimize: bool = False) -> dict[str, Any]:
     return {"hwnd": int(hwnd), "visible": False, "minimized": minimize}
 
 
-def show_desktop(name: str) -> dict[str, Any]:
+def show_desktop(
+    name: str,
+    instruction: str = "Complete the requested manual step.",
+) -> dict[str, Any]:
     """Switch the live input desktop to a headless desktop so a human can use it.
 
     The whole off-screen desktop becomes the interactive one (its app windows are
     now on screen). Remember to call hide_desktop to return to the normal desktop -
     typically after the user finishes an interactive login.
     """
-    global _saved_input_desktop
-    hdesk = _DESKTOPS.get(name)
-    if hdesk is None:
-        hdesk = user32.OpenDesktopW(name, 0, False, GENERIC_ALL)
-        _check(hdesk, f"OpenDesktopW('{name}')")
-        _DESKTOPS[name] = int(hdesk)
-    current = user32.OpenInputDesktop(0, False, GENERIC_ALL)
-    _saved_input_desktop = int(current) if current else None
-    _check(user32.SwitchDesktop(hdesk), f"SwitchDesktop('{name}')")
+    global _saved_input_desktop, _safety_banner
+    with _desktop_switch_lock:
+        hdesk = _DESKTOPS.get(name)
+        if hdesk is None:
+            hdesk = user32.OpenDesktopW(name, 0, False, GENERIC_ALL)
+            _check(hdesk, f"OpenDesktopW('{name}')")
+            _DESKTOPS[name] = int(hdesk)
+        if _safety_banner is not None:
+            _safety_banner.close()
+        banner = _HeadlessSafetyBanner(name, instruction)
+        banner.start()
+        _safety_banner = banner
+        current = user32.OpenInputDesktop(0, False, GENERIC_ALL)
+        _saved_input_desktop = int(current) if current else None
+        try:
+            _check(user32.SwitchDesktop(hdesk), f"SwitchDesktop('{name}')")
+        except BaseException:
+            banner.close()
+            _safety_banner = None
+            if _saved_input_desktop is not None:
+                user32.CloseDesktop(_saved_input_desktop)
+                _saved_input_desktop = None
+            raise
     return {
         "name": name,
         "visible": True,
-        "note": "This desktop is now interactive. Call hide_headless_desktop to switch back.",
+        "safety_banner": True,
+        "note": (
+            "This desktop is now interactive with a non-dismissible instruction banner. "
+            "Call hide_headless_desktop to switch back; the user can also use EMERGENCY EXIT."
+        ),
     }
 
 
 def hide_desktop(name: Optional[str] = None) -> dict[str, Any]:
     """Switch the input desktop back to the one we came from (or 'Default')."""
-    global _saved_input_desktop
-    target = _saved_input_desktop
-    if target is None:
-        target = user32.OpenDesktopW("Default", 0, False, GENERIC_ALL)
-        _check(target, "OpenDesktopW('Default')")
-    _check(user32.SwitchDesktop(target), "SwitchDesktop(restore)")
-    if _saved_input_desktop is not None:
-        user32.CloseDesktop(_saved_input_desktop)
-        _saved_input_desktop = None
+    global _safety_banner
+    _restore_input_desktop()
+    banner = _safety_banner
+    _safety_banner = None
+    if banner is not None:
+        banner.close()
     return {"restored": True}

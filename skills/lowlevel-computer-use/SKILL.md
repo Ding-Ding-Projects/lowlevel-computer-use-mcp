@@ -99,7 +99,9 @@ drive via background tools + `screenshot {hwnd}`. Linux: `create_virtual_display
 
 **D. Show for login, then hide.** When automation hits a human-only login: Windows
 window → `show_window {window_title}`; whole headless desktop →
-`show_headless_desktop {name}`. After the user signs in → `hide_window` /
+`show_headless_desktop {name, instruction}`. Supply a short, concrete instruction
+for the non-dismissible top banner; its EMERGENCY EXIT button returns the user to
+the normal desktop. After the user signs in → `hide_window` /
 `hide_headless_desktop`.
 
 **E. Throwaway Linux box (Windows host).** `wsl_create_temp {}` →

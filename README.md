@@ -1,19 +1,47 @@
 # lowlevel-computer-use-mcp
 
-A **low-level computer-use MCP server** for Windows (most tools also work on
-macOS/Linux). It exposes raw desktop control to any MCP client — Claude Code,
-Codex, Claude Desktop, etc. — as a set of well-described tools:
+> **Real GUI apps. Zero desktop clutter.** Give an MCP agent a desktop of its own.
 
+[Explore the project site](https://codingmachineedge.github.io/lowlevel-computer-use-mcp/) · [Jump to quick start](#quick-start-gui-installer--fully-automatic)
+
+The headline feature is **headless desktop automation**: run full native GUI
+applications on an invisible Windows desktop or Linux Xvfb display, then let an
+agent capture, click, and type without stealing focus or disturbing the desktop
+you are using.
+
+```text
+create isolated desktop → launch real GUI app → automate off-screen → capture & verify
+```
+
+When a login or other human-only step is unavoidable, the agent can temporarily
+reveal that desktop. A non-dismissible top banner tells the user exactly what to
+do, and an **EMERGENCY EXIT** button immediately returns to the normal desktop.
+
+## Why headless-with-GUI?
+
+- 🫥 **Invisible by default** — apps retain a real GUI while staying off your visible desktop
+- 🎯 **No focus stealing** — background mouse, keyboard, and control targeting keep your workflow uninterrupted
+- 📸 **Still observable** — capture individual windows even while they are occluded, unfocused, or off-screen
+- 🧑‍💻 **Safe human handoff** — reveal the desktop only when needed, with persistent instructions and emergency return
+- 🪟 **Native on Windows** — isolated Win32 desktops via `CreateDesktop` and `SwitchDesktop`
+- 🐧 **Native on Linux** — virtual GUI displays backed by Xvfb
+
+## Everything else agents need
+
+This low-level computer-use MCP server works with Codex, Claude Code, Claude
+Desktop, and other MCP clients. Headless desktops are the centerpiece; the same
+server also exposes the primitives needed to automate and verify them end to end:
+
+- 🫥 **Headless GUI** — run real GUI apps on an off-screen desktop; show them only when a human login is needed
+- 🎯 **Background / unfocused targeting** — drive a specific window via Win32 messages **without focusing it**
+- 📸 **Screenshots** — all monitors, one monitor, a region, or **one window via PrintWindow**
 - 🖱️ **Mouse** — move, click, double/right/middle click, drag, scroll, cursor position
 - ⌨️ **Keyboard** — type text, press hotkey combinations (Ctrl+C, Alt+Tab, …)
 - 🖥️ **Shell commands** — run arbitrary system commands and capture output
 - 🪟 **Windows** — list, move, resize, focus, minimize, maximize, restore, close, **show/hide**
 - ⚙️ **Processes** — list running processes; kill by PID or name
-- 📸 **Screenshots** — all monitors, one monitor, a region, or **one window via PrintWindow**
 - ✂️ **Cropping** — crop any saved image to a sub-region
 - 🎥 **Screen recording** — record a monitor or region to mp4 in the background
-- 🎯 **Background / unfocused targeting** — drive a specific window via Win32 messages **without focusing it**
-- 🫥 **Headless GUI** — run real GUI apps on an off-screen desktop; show them only when a human login is needed
 - 🛡️ **Run-as-admin** — per-command UAC elevation or whole-server elevation
 - 🚀 **Auto-start on boot** — register a logon scheduled task (optionally as admin)
 - 🟢 **AutoHotkey add-in** — run AHK scripts; `ControlSend`/`ControlClick` for rock-solid background input
@@ -345,10 +373,15 @@ Some steps (sign-in) need a human. Temporarily switch the live screen to the
 off-screen desktop:
 
 ```jsonc
-show_headless_desktop { "name": "work" }
+show_headless_desktop {
+  "name": "work",
+  "instruction": "Sign in to the app, then tell the agent you are done."
+}
 ```
 
-…let the user log in, then switch back to the normal desktop:
+The interactive desktop has a topmost banner that cannot be closed. It displays
+the instruction and includes an **EMERGENCY EXIT** button that immediately returns
+the user to the normal desktop. After the user finishes, switch back normally:
 
 ```jsonc
 hide_headless_desktop { "name": "work" }
