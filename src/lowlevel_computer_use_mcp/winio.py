@@ -67,7 +67,7 @@ PW_RENDERFULLCONTENT = 0x00000002
 GENERIC_ALL = 0x10000000
 DESKTOP_CREATEWINDOW = 0x0002
 STARTF_USESHOWWINDOW = 0x00000001
-CREATE_NEW_CONSOLE = 0x00000010
+CREATE_NO_WINDOW = 0x08000000
 SW_SHOWNORMAL = 1
 
 
@@ -604,7 +604,7 @@ def launch_on_desktop(name: str, command_line: str) -> dict[str, Any]:
     pi = PROCESS_INFORMATION()
     cmd_buf = ctypes.create_unicode_buffer(command_line)
     ok = kernel32.CreateProcessW(
-        None, cmd_buf, None, None, False, CREATE_NEW_CONSOLE, None, None,
+        None, cmd_buf, None, None, False, CREATE_NO_WINDOW, None, None,
         ctypes.byref(si), ctypes.byref(pi),
     )
     _check(ok, f"CreateProcessW('{command_line}')")

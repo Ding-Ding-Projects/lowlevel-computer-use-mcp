@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
+from .processes import hidden_subprocess_kwargs
+
 
 class AhkError(RuntimeError):
     pass
@@ -103,7 +105,14 @@ def run_script(code: str, args: Optional[list[str]] = None, timeout: float = 60.
         # UTF-8 with BOM so AutoHotkey reads unicode correctly.
         Path(path).write_text(code, encoding="utf-8-sig")
         cmd = [exe, "/ErrorStdOut", path, *(args or [])]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+            **hidden_subprocess_kwargs(),
+        )
         return {
             "ok": proc.returncode == 0,
             "returncode": proc.returncode,

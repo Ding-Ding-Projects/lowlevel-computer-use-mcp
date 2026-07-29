@@ -16,6 +16,7 @@ No params. → `{ok, x, y}` — current cursor position (screen pixels).
 
 ### `mouse_move` (X)
 - `*x` int ≥0, `*y` int ≥0 — target screen coordinate.
+- `confirm_focus_disruption` bool (default false) — required after explicit user consent.
 - `duration` float 0–10 (default 0) — seconds to animate; `0` uses the visible smooth default.
 - `instant` bool (default false) — set true only when you intentionally want a jump.
 → `{ok, x, y, duration}`.
@@ -104,6 +105,7 @@ No params. → `{ok, window:{...}|null}`.
 
 ### `show_window` (X)
 - `hwnd`/`window_title`, `display` (Linux).
+- `confirm_focus_disruption` bool (default false) — required.
 - Restores + shows + foregrounds a hidden/minimized window. Use before an
   interactive **login**. → `{ok, hwnd, visible:true}`.
 
@@ -204,6 +206,7 @@ No params. → `{ok, recording, path, frames, elapsed_seconds}`.
   the live screen TO this off-screen desktop (for an interactive login). A topmost,
   non-dismissible banner shows the instruction and an EMERGENCY EXIT button that
   restores the normal desktop. → `{ok, name, visible:true, safety_banner:true, note}`.
+- `confirm_focus_disruption` bool (default false) — required after explicit approval.
 
 ### `hide_headless_desktop` (W)
 - `name` str — switch the live screen back to the normal desktop. → `{ok, restored:true}`.
@@ -292,12 +295,15 @@ No params. → `{ok, is_admin, platform}`.
 → `{ok, returncode, output, elevated_prompt}`.
 
 ### `install_startup` (W, destructive)
-- `run_as_admin` bool (default true — RunLevel Highest), `http` bool (default true —
+- `run_as_admin` bool (default false), `http` bool (default true —
   start in HTTP mode at boot), `host` str (default 127.0.0.1), `port` int (default 8765).
-- Registers a logon Scheduled Task (interactive). → `{ok, task_name, run_as_admin, mode, endpoint, output}`.
+- Default: UTF-16 user Startup launcher using `pythonw.exe`, with no console or UAC.
+  Elevated Scheduled Task is opt-in and UAC requires `confirm_focus_disruption:true`.
+  → `{ok, task_name, run_as_admin, mode, endpoint, output}`.
 
 ### `uninstall_startup` (W, destructive)
-No params. Removes the task (may prompt UAC). → `{ok, task_name, output}`.
+No params. Removes user startup without UAC; removing an elevated task requires an
+already elevated server and otherwise returns a permission error. → `{ok, task_name, output}`.
 
 ### `startup_status` (W)
 No params. → `{ok, installed, details, task_name}`.

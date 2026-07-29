@@ -21,6 +21,8 @@ import urllib.request
 from pathlib import Path
 from typing import Any, Optional
 
+from .processes import hidden_subprocess_kwargs
+
 WSL_EXE = "wsl.exe"
 ALPINE_LATEST_DIR = "https://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/{arch}/"
 
@@ -67,6 +69,8 @@ def _wsl(args: list[str], timeout: float = 120.0, input_bytes: Optional[bytes] =
         input=input_bytes,
         env=env,
         timeout=timeout,
+        check=False,
+        **hidden_subprocess_kwargs(),
     )
     return proc.returncode, _decode(proc.stdout), _decode(proc.stderr)
 

@@ -28,7 +28,7 @@ Check at runtime: `linux_status`, `ahk_status`, `wsl_status`. On Windows the
 - **Background input** uses `PostMessage` (clicks to the deepest child control at a
   point) and `WM_CHAR`/`WM_SETTEXT`. Some apps that read raw input or check physical
   key state (`GetAsyncKeyState`) ignore these — use `win_set_control_text`, AutoHotkey
-  `ahk_control_send`, or focus the window.
+  `ahk_control_send`, or report the limitation. Do not focus it while the user is active.
 - **PrintWindow** capture (`screenshot {hwnd}`) works on most GDI/Chromium/DWM windows
   with full-content rendering, even occluded or minimized; a few GPU-exclusive
   surfaces render black — fall back to a region `screenshot`.
@@ -36,6 +36,9 @@ Check at runtime: `linux_status`, `ahk_status`, `wsl_status`. On Windows the
   there have a real GUI but never appear on the visible desktop. `show_headless_desktop`
   uses `SwitchDesktop` to make the whole desktop interactive (e.g. for a login), then
   `hide_headless_desktop` switches back.
+- **No-window policy**: Windows subprocesses use `CREATE_NO_WINDOW` plus `SW_HIDE`;
+  client registration and user startup use `pythonw.exe`. Foreground calls require
+  explicit `confirm_focus_disruption:true`.
 - **AutoHotkey**: install with `winget install -e --id AutoHotkey.AutoHotkey`. The
   server auto-detects it (PATH / common dirs / `LOWLEVEL_CU_AHK`). Generated helpers
   target AHK v2; `run_ahk` runs whatever interpreter is found.
@@ -52,8 +55,8 @@ Check at runtime: `linux_status`, `ahk_status`, `wsl_status`. On Windows the
   backend for foreground mouse/keyboard.
 - **Background typing** uses `XSendEvent`; most GTK/Qt apps accept it. Notable
   exception: `xterm` with its default `allowSendEvents: false` ignores synthetic
-  events (launch it with `-xrm 'XTerm.vt100.allowSendEvents: true'` to allow, or focus
-  the window first).
+  events (launch it with `-xrm 'XTerm.vt100.allowSendEvents: true'` to allow, or
+  report the limitation rather than stealing focus).
 - **Xvfb virtual display** is the Linux headless mode. To DRIVE windows on it, pass the
   `display` field to `mouse_click` / `type_text` / `win_send_keys` / `screenshot` so
   input is routed to that X display; otherwise the default `:0` is used and the window

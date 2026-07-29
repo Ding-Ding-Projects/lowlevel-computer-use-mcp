@@ -29,8 +29,9 @@ saving a repeated UI sequence as a **macro skill**.
    window) to see current state before clicking/typing blind.
 2. **Resolve handles at run time.** Window handles/ids change every launch. Always
    `list_windows` → `list_child_windows` to find the current `hwnd`; never hard-code.
-3. **Prefer background targeting** (`hwnd`/`window_title` on click/type/screenshot,
-   plus `win_set_control_text`) so you don't steal the user's focus.
+3. **Headless first.** Create an off-screen Windows desktop or Linux Xvfb display,
+   then use `hwnd`/`window_title` background targeting. Foreground tools are blocked
+   unless `confirm_focus_disruption=true` follows explicit user approval.
 4. **Coordinates:** foreground mouse tools use **screen** pixels; background clicks
    use **client** coordinates of the target window.
 5. **Verify after acting.** Re-`screenshot` the window and confirm the change.
@@ -82,8 +83,9 @@ Platform specifics and gotchas: see [reference/PLATFORMS.md](reference/PLATFORMS
 
 ## Five core patterns (quick)
 
-**A. Foreground automation (simple).** `screenshot` → `mouse_click {x,y}` →
-`type_text {text}` → `press_keys {keys:["ctrl","s"]}` → `screenshot` to verify.
+**A. Foreground automation (explicit handoff only).** After user approval, pass
+`confirm_focus_disruption:true` to each foreground call, verify, and return to
+headless mode immediately.
 
 **B. Background automation (no focus stealing).**
 `list_windows {title_filter}` → `list_child_windows {window_title}` → pick the
@@ -98,8 +100,8 @@ drive via background tools + `screenshot {hwnd}`. Linux: `create_virtual_display
 `screenshot_virtual_display {display}`.
 
 **D. Show for login, then hide.** When automation hits a human-only login: Windows
-window → `show_window {window_title}`; whole headless desktop →
-`show_headless_desktop {name, instruction}`. Supply a short, concrete instruction
+window → `show_window {window_title, confirm_focus_disruption:true}`; whole headless desktop →
+`show_headless_desktop {name, instruction, confirm_focus_disruption:true}`. Supply a short, concrete instruction
 for the non-dismissible top banner; its EMERGENCY EXIT button returns the user to
 the normal desktop. After the user signs in → `hide_window` /
 `hide_headless_desktop`.
@@ -124,7 +126,7 @@ verify with a screenshot.
 - **Background input limits:** Windows `PostMessage`/`WM_CHAR` and Linux
   `XSendEvent` are ignored by some apps (raw input / DirectInput / physical key-state
   checks; `xterm` with `allowSendEvents:false`). For those, use `win_set_control_text`
-  / AHK `ControlSend` (Windows), or focus the window first.
+  / AHK `ControlSend` (Windows), or report the limitation without stealing focus.
 - **PrintWindow** (Windows per-window capture) renders black on a few
   GPU-exclusive surfaces; fall back to a region `screenshot`.
 - `pyautogui` fail-safe is **disabled** — moving the mouse to a corner won't abort.
