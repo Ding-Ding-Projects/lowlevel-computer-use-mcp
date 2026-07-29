@@ -116,6 +116,7 @@ class HiddenProcessTests(unittest.TestCase):
         self.assertIn("-m lowlevel_computer_use_mcp.server", body)
         self.assertNotIn("uv run", body)
 
+    @unittest.skipUnless(os.name == "nt", "Windows startup status tool required")
     def test_startup_status_recognizes_user_launcher(self):
         with patch.object(
             server,
