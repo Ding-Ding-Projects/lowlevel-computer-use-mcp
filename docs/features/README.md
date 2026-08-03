@@ -9,4 +9,5 @@ security notes, and verification boundaries.
 - [Electron Material 3 manual client](electron-manual-client.md)
 - [Quick launch and path browsers](quick-launch-browser.md)
 - [Tab groups and bulk close](tab-management.md)
+- [Memory checkpoints and local revisions](memory-checkpoints.md)
 - [Subagent lanes](subagent-lanes.md)

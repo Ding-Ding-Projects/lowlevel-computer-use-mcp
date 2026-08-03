@@ -1,8 +1,8 @@
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 const DEFAULT_SETTINGS = { language: 'English', englishFunny: 1, cantoneseFunny: 1, theme: 'dark', density: 'comfortable', accent: '#8ab4f8', fontScale: 1, appearance: { font: 'Segoe UI', weight: 400, radius: 20, surface: '#1a1d24', text: '#e4e1e9', accent: '#aec6ff' } };
-const DEFAULT_TABS = { order: ['workspace', 'runner', 'history', 'settings', 'notifications', 'changelog', 'help'], pinned: ['workspace'], groups: { core: { label: 'Core', collapsed: false, tabs: ['workspace', 'runner'] }, records: { label: 'Records', collapsed: false, tabs: ['history', 'notifications', 'changelog'] }, customize: { label: 'Customize', collapsed: false, tabs: ['settings', 'help'] } } };
-const TAB_LABELS = { workspace: 'Workspaces', runner: 'Tool runner', history: 'History', settings: 'Settings', notifications: 'Notifications', changelog: 'Changelog', help: 'Manual' };
+const DEFAULT_TABS = { order: ['workspace', 'runner', 'history', 'settings', 'notifications', 'changelog', 'help', 'memory'], pinned: ['workspace'], groups: { core: { label: 'Core', collapsed: false, tabs: ['workspace', 'runner'] }, records: { label: 'Records', collapsed: false, tabs: ['history', 'notifications', 'changelog'] }, customize: { label: 'Customize', collapsed: false, tabs: ['settings', 'help', 'memory'] } } };
+const TAB_LABELS = { workspace: 'Workspaces', runner: 'Tool runner', history: 'History', settings: 'Settings', notifications: 'Notifications', changelog: 'Changelog', help: 'Manual', memory: 'Memory' };
 const DOCS_URL = 'https://codingmachineedge.github.io/lowlevel-computer-use-mcp/';
 const CHANGELOG = [{ version: '0.1.0', date: '2026-08-03', title: 'Headless-first remote control foundation', codeName: 'Classic Har Gow · 蝦餃', codeNameUrl: 'https://github.com/Ding-Ding-Projects/dim-sum-photos/releases/download/catalog-v1/hk-dish-0001-classic-har-gow.png', commit: '92d5fda64a9db8e65ab2cf39b094408fb8eab634', url: 'https://github.com/codingmachineedge/lowlevel-computer-use-mcp/commit/92d5fda64a9db8e65ab2cf39b094408fb8eab634', changes: ['Multiple named headless desktops for project and agent isolation.', 'Console-free process launch and foreground focus protection.', 'Trusted-LAN API with command execution and bounded file transfer.', 'Electron manual client with saved connections, history, settings, and regex search.'] }];
 
@@ -13,6 +13,7 @@ let agents = [];
 let notifications = [];
 let desktops = [];
 let changelogEntries = CHANGELOG;
+let memoryEntries = [];
 let toolCatalogNames = [];
 let activeTab = 'workspace';
 let appearanceTarget = 'global';
@@ -87,7 +88,7 @@ function renderTabs() {
 }
 async function saveTabs() { tabs = normalizeTabs(tabs); await window.lowlevel.setTabs(tabs); renderTabs(); renderTabManager(); renderTabGroupOptions(); }
 async function moveTab(from, to) { if (!from || !to || from === to) return; const order = tabs.order.filter((id) => id !== from); order.splice(Math.max(0, order.indexOf(to)), 0, from); tabs.order = order; await saveTabs(); }
-async function navigate(id) { if (!TAB_LABELS[id]) return; activeTab = id; document.querySelectorAll('.page').forEach((page) => page.classList.toggle('active', page.id === id)); renderTabs(); if (id === 'history') await loadHistory(); if (id === 'notifications') await loadNotifications(); if (id === 'changelog') renderChangelog(); if (id === 'settings') renderTabManager(); }
+async function navigate(id) { if (!TAB_LABELS[id]) return; activeTab = id; document.querySelectorAll('.page').forEach((page) => page.classList.toggle('active', page.id === id)); renderTabs(); if (id === 'history') await loadHistory(); if (id === 'notifications') await loadNotifications(); if (id === 'changelog') renderChangelog(); if (id === 'settings') renderTabManager(); if (id === 'memory') await loadMemory(); }
 
 function makeMatcher(field, query) {
   const state = regexStates[field] || { pattern: '', flags: 'i' };
@@ -176,7 +177,7 @@ function bulkTabMatchResult() {
   const pattern = bulkTabState.pattern.trim();
   let predicate;
   try {
-    const safeQuery = query.replace(/[^ws-]/g, (char) => '\\' + char);
+    const safeQuery = query.replace(/[^\w\s-]/g, (char) => '\\' + char);
     const expression = new RegExp(pattern || safeQuery, bulkTabState.flags || 'i');
     predicate = (label) => { expression.lastIndex = 0; return expression.test(label); };
   } catch (error) {
@@ -321,6 +322,40 @@ function renderTabManager() {
 }
 
 function applySettings(next) { settings = { ...DEFAULT_SETTINGS, ...next, appearance: { ...DEFAULT_SETTINGS.appearance, ...(next.appearance || {}) } }; const root = document.documentElement; root.style.setProperty('--accent', settings.accent); root.style.setProperty('--font-scale', settings.fontScale); root.style.setProperty('--font-family', settings.appearance.font); root.style.setProperty('--font-weight', settings.appearance.weight); root.style.setProperty('--radius', `${settings.appearance.radius}px`); root.style.setProperty('--surface', settings.appearance.surface); root.style.setProperty('--text', settings.appearance.text); root.style.setProperty('--appearance-accent', settings.appearance.accent); root.dataset.density = settings.density; root.dataset.language = settings.language; if (settings.theme === 'light') { root.style.setProperty('--bg', '#f8f8ff'); root.style.setProperty('--surface2', '#e0e3ed'); root.style.setProperty('--muted', '#45464f'); root.style.colorScheme = 'light'; } else { root.style.setProperty('--bg', '#101318'); root.style.setProperty('--surface2', '#232731'); root.style.setProperty('--muted', '#c4c6d0'); root.style.colorScheme = 'dark'; } $('englishFunnyValue').value = settings.englishFunny; $('cantoneseFunnyValue').value = settings.cantoneseFunny; $('englishFunnyValue').textContent = settings.englishFunny; $('cantoneseFunnyValue').textContent = settings.cantoneseFunny; $('appearanceFont').value = settings.appearance.font; $('appearanceWeight').value = settings.appearance.weight; $('appearanceRadius').value = settings.appearance.radius; $('appearanceSurface').value = settings.appearance.surface; $('appearanceText').value = settings.appearance.text; $('appearanceAccent').value = settings.appearance.accent; $('settingsDisclosure').textContent = localized('Funny levels style every app message, including errors and warnings. Facts, command names, paths, and affected data remain exact.', 'Funny level 會幫所有 app 訊息加語氣，包括錯誤同警告；事實、command 名、路徑同受影響資料保持原樣。'); }
+async function loadMemory() { memoryEntries = await window.lowlevel.getMemory(); renderMemory(); }
+function renderMemory() {
+  const list = $('memoryList');
+  if (!list) return;
+  const matcher = makeMatcher('memorySearch', $('memorySearch')?.value || '');
+  const visible = memoryEntries.filter((entry) => matcher(`${entry.label} ${entry.action} ${entry.revision || ''}`));
+  list.innerHTML = visible.length ? visible.map((entry) => '<article class="history-item memory-item"><div><strong>' + escapeHtml(entry.label) + '</strong><span class="support">' + escapeHtml(entry.action) + ' · ' + escapeHtml(entry.at) + (entry.revision ? ' · revision ' + escapeHtml(entry.revision.slice(0, 8)) : '') + '</span></div><button class="tonal memory-restore" data-memory-id="' + escapeHtml(entry.id) + '" type="button">Restore</button></article>').join('') : '<p class="empty">No memory checkpoints match this search.</p>';
+  document.querySelectorAll('.memory-restore').forEach((button) => button.addEventListener('click', () => {
+    const entry = memoryEntries.find((item) => item.id === button.dataset.memoryId);
+    if (!entry) return;
+    openConfirmation('Restore memory checkpoint', `This replaces settings, connections, agent lanes, and tab layout with “${entry.label}”. A new revision records the restore.`, async () => {
+      await window.lowlevel.createMemoryCheckpoint('Before restoring: ' + entry.label);
+      const result = await window.lowlevel.restoreMemoryCheckpoint(entry.id);
+      if (!result.ok) { await notify(result.error, 'Memory checkpoint 搵唔到喇。', 'error'); return; }
+      settings = { ...DEFAULT_SETTINGS, ...result.state.settings, appearance: { ...DEFAULT_SETTINGS.appearance, ...(result.state.settings.appearance || {}) } };
+      tabs = normalizeTabs(result.state.tabs); connections = result.state.connections || []; agents = result.state.agents || [];
+      applySettings(settings); await window.lowlevel.setSettings(settings); await loadConnections(); renderAgents(); renderTabs(); renderTabManager(); await loadMemory();
+      await notify('Memory checkpoint restored and recorded as a new revision.', 'Memory checkpoint 還原好，亦記低咗新 revision。');
+    });
+  }));
+}
+async function createMemoryCheckpoint() {
+  const label = $('memoryLabel').value.trim();
+  if (!label) { await notify('Name the checkpoint before saving it.', '要幫 checkpoint 改個名先喇。', 'error'); return; }
+  const entry = await window.lowlevel.createMemoryCheckpoint(label);
+  $('memoryLabel').value = '';
+  await loadMemory();
+  await notify(`Memory checkpoint “${entry.label}” saved.`, `Memory checkpoint「${entry.label}」儲好喇。`);
+}
+async function exportMemory() {
+  const markdown = '# Memory checkpoints\n\n' + memoryEntries.map((entry) => `## ${entry.label}\n\n- Action: ${entry.action}\n- Created: ${entry.at}\n- Revision: ${entry.revision || 'snapshot-only'}\n`).join('\n');
+  const file = await window.lowlevel.exportText(markdown);
+  await notify(`Memory checkpoints exported to ${file}.`, `Memory checkpoints export 咗去 ${file}。`);
+}
 async function loadSettings() { applySettings(await window.lowlevel.getSettings()); $('language').value = settings.language; $('englishFunny').value = settings.englishFunny; $('cantoneseFunny').value = settings.cantoneseFunny; $('theme').value = settings.theme; $('density').value = settings.density; $('accent').value = settings.accent; $('fontScale').value = settings.fontScale; }
 async function saveSettings() { settings = { ...settings, language: $('language').value, englishFunny: Number($('englishFunny').value), cantoneseFunny: Number($('cantoneseFunny').value), theme: $('theme').value, density: $('density').value, accent: $('accent').value, fontScale: Number($('fontScale').value) }; applySettings(settings); await window.lowlevel.setSettings(settings); await notify('Settings saved for this user.', '使用者設定已經儲存。'); }
 async function saveAppearance() { settings.appearance = { font: $('appearanceFont').value || 'Segoe UI', weight: Number($('appearanceWeight').value), radius: Number($('appearanceRadius').value), surface: $('appearanceSurface').value, text: $('appearanceText').value, accent: $('appearanceAccent').value }; applySettings(settings); await window.lowlevel.setSettings(settings); await notify('Appearance applied and persisted.', '外觀已套用並儲存。'); }
@@ -338,6 +373,7 @@ const paletteItems = () => [
   { label: 'Density', detail: 'Settings', run: () => { navigate('settings'); $('density').focus(); } },
   { label: 'Font scale', detail: 'Settings', run: () => { navigate('settings'); $('fontScale').focus(); } },
   { label: 'Appearance editor', detail: 'Settings', run: () => { navigate('settings'); $('appearanceFont').focus(); } },
+  { label: 'Memory checkpoints', detail: 'Memory', run: () => { navigate('memory'); $('memoryLabel').focus(); } },
   { label: 'Run current MCP tool', detail: 'Tool runner', run: () => navigate('runner') },
   { label: 'Install or repair dependencies', detail: 'Quiet setup', run: async () => { navigate('runner'); $('installDeps').click(); } },
   { label: 'Host trusted-LAN API', detail: 'Workspaces', run: () => { navigate('workspace'); $('startApi').focus(); } },
@@ -375,6 +411,7 @@ function bindEvents() {
   $('tabBulkQuery').addEventListener('input', previewTabBulk); $('tabBulkScope').addEventListener('change', () => { $('tabBulkScope').dataset.selected = $('tabBulkScope').value; previewTabBulk(); }); $('tabBulkMode').addEventListener('change', previewTabBulk); $('tabBulkIncludePinned').addEventListener('change', previewTabBulk); $('tabBulkRegexToggle').addEventListener('click', openBulkTabRegex); $('tabBulkRegexPattern').addEventListener('input', updateBulkTabRegex); $('tabBulkRegexFlags').addEventListener('input', updateBulkTabRegex); $('previewTabBulk').addEventListener('click', previewTabBulk); $('applyTabBulk').addEventListener('click', applyTabBulk);
   $('pinActiveTab').addEventListener('click', async () => { tabs.pinned = tabs.pinned.includes(activeTab) ? tabs.pinned.filter((id) => id !== activeTab) : [...tabs.pinned, activeTab]; await saveTabs(); }); $('moveActiveTab').addEventListener('click', async () => { const index = tabs.order.indexOf(activeTab); tabs.order.splice(index, 1); tabs.order.splice((index + 1) % (tabs.order.length + 1), 0, activeTab); await saveTabs(); }); $('resetTabs').addEventListener('click', () => openConfirmation('Reset tab layout', 'This replaces your saved order, pins, and groups with the default layout.', async () => { tabs = JSON.parse(JSON.stringify(DEFAULT_TABS)); await saveTabs(); }));
   $('changelogSearch').addEventListener('input', renderChangelog); $('changelogDateFrom').addEventListener('input', renderChangelog); $('changelogDateTo').addEventListener('input', renderChangelog); $('changelogRegexPattern').addEventListener('input', renderChangelog); $('changelogRegexFlags').addEventListener('input', renderChangelog); wireRegexToggle('changelogRegexToggle', 'changelogRegexPanel'); wireRegexInputs('changelogSearch', 'changelogRegexPattern', 'changelogRegexFlags', 'changelogRegexResult', renderChangelog); $('exportChangelog').addEventListener('click', async () => { const file = await window.lowlevel.exportText(changelogEntries.map((entry) => `# ${entry.version} — ${entry.title}\n\nReleased ${entry.date}; commit ${entry.commit}\n\n${entry.changes.map((change) => `- ${change}`).join('\n')}`).join('\n\n')); await notify(`Changelog exported to ${file}.`, `Changelog export 咗去 ${file}。`); });
+  $('memorySearch').addEventListener('input', renderMemory); $('memoryRegexPattern').addEventListener('input', renderMemory); $('memoryRegexFlags').addEventListener('input', renderMemory); wireRegexToggle('memoryRegexToggle', 'memoryRegexPanel'); wireRegexInputs('memorySearch', 'memoryRegexPattern', 'memoryRegexFlags', 'memoryRegexResult', renderMemory); $('createMemoryCheckpoint').addEventListener('click', createMemoryCheckpoint); $('exportMemory').addEventListener('click', exportMemory);
   $('paletteSearch').addEventListener('input', renderPalette); $('paletteRegexToggle').addEventListener('click', () => $('paletteRegexPanel').classList.toggle('open')); wireRegexInputs('paletteSearch', 'paletteRegexPattern', 'paletteRegexFlags', 'paletteRegexResult', renderPalette);
   $('savePopoverAppearance').addEventListener('click', savePopoverAppearance); $('closeAppearancePopover').addEventListener('click', () => $('appearancePopover').classList.remove('open')); document.addEventListener('contextmenu', (event) => { const target = event.target.closest('[data-appearance]'); if (target) { event.preventDefault(); openAppearance(target, target.dataset.appearance); } }); document.addEventListener('click', (event) => { const menu = $('tabContextMenu'); if (menu?.classList.contains('open') && !menu.contains(event.target) && !event.target.closest('.tab')) menu.classList.remove('open'); }); document.addEventListener('keydown', (event) => { if (event.key === 'Escape') $('tabContextMenu')?.classList.remove('open'); if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); openPalette(); } if (event.key === 'F10' && event.shiftKey && document.activeElement?.matches('[data-appearance]')) { event.preventDefault(); openAppearance(document.activeElement, document.activeElement.dataset.appearance); } });
   $('confirmCancel').addEventListener('click', () => $('confirmDialog').close()); $('confirmKeyOne').addEventListener('click', () => { $('confirmKeyOne').classList.toggle('armed'); updateConfirmation(); }); $('confirmKeyTwo').addEventListener('click', () => { $('confirmKeyTwo').classList.toggle('armed'); updateConfirmation(); }); $('confirmSlider').addEventListener('input', updateConfirmation); $('confirmCommit').addEventListener('click', async () => { const action = $('confirmDialog')._action; $('confirmDialog').close(); $('confirmKeyOne').classList.remove('armed'); $('confirmKeyTwo').classList.remove('armed'); $('confirmSlider').value = 0; $('confirmCommit').disabled = true; await action?.(); });
@@ -390,5 +427,5 @@ window.__captureTab = async (id) => {
 };
 
 function setToolPath(selected) { try { const input = json('toolInput'); input.path = selected; $('toolInput').value = JSON.stringify(input, null, 2); } catch { $('toolInput').value = JSON.stringify({ path: selected }, null, 2); } }
-async function bootstrap() { ensurePathBrowser(); ensureQuickLaunchBrowser(); ensureSubagentPanel(); ensureTabManagerControls(); ensureAppearanceTranslator(); await ensureReleaseIdentity(); bindEvents(); tabs = normalizeTabs(await window.lowlevel.getTabs()); await loadSettings(); await loadConnections(); await loadAgents(); await loadTools(); await loadNotifications(); await loadChangelog(); renderTabs(); renderTabManager(); renderChangelog(); await refreshDesktops(); }
+async function bootstrap() { ensurePathBrowser(); ensureQuickLaunchBrowser(); ensureSubagentPanel(); ensureTabManagerControls(); ensureAppearanceTranslator(); await ensureReleaseIdentity(); bindEvents(); tabs = normalizeTabs(await window.lowlevel.getTabs()); await loadSettings(); await loadConnections(); await loadAgents(); await loadTools(); await loadNotifications(); await loadChangelog(); await loadMemory(); renderTabs(); renderTabManager(); renderChangelog(); await refreshDesktops(); }
 bootstrap().catch((error) => { setStatus('Needs attention'); show(error.message); });

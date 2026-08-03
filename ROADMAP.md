@@ -13,6 +13,8 @@
   history, command palette tool catalog, and Squirrel.Windows packaging.
 - Persistent tab groups, searchable tab context menus, reviewable bulk close with
   optional regex, and public catalog-backed release code names.
+- Named local memory checkpoints for settings, connections, agent lanes, and tab
+  layout, with Git-backed restore revisions.
 
 ## Evidence still required
 

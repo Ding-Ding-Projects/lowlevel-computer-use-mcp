@@ -30,12 +30,18 @@ assert.match(renderer, /Close tabs not containing text/);
 assert.match(renderer, /openTabContextMenu/);
 assert.match(renderer, /createTabGroup/);
 assert.match(renderer, /ensureReleaseIdentity/);
+assert.match(renderer, /createMemoryCheckpoint/);
+assert.match(renderer, /restoreMemoryCheckpoint/);
+assert.match(main, /local-versions/);
+assert.match(main, /memory:create/);
+assert.match(main, /memory:restore/);
+assert.match(main, /memory-self-test/);
 assert.ok(codename.codeName && codename.imageUrl, 'missing release code-name metadata');
 for (const id of ['tabAdvancedControls', 'tabBulkScope', 'tabBulkMode', 'tabBulkRegexPanel', 'tabContextMenu']) assert.match(renderer, new RegExp(id));
 assert.match(renderer, /toolCatalogNames/);
-for (const id of ['launchCommand', 'tabRegexPanel', 'commandPalette', 'confirmDialog']) assert.match(html, new RegExp(`id="${id}"`));
+for (const id of ['launchCommand', 'tabRegexPanel', 'commandPalette', 'confirmDialog', 'memory', 'memoryList', 'memoryLabel']) assert.match(html, new RegExp(`id="${id}"`));
 assert.equal(packageJson.build.win.target[0].target, 'squirrel');
-for (const screenshot of ['electron-workspaces.png', 'electron-settings.png', 'electron-changelog.png']) {
+for (const screenshot of ['electron-workspaces.png', 'electron-settings.png', 'electron-tab-management.png', 'electron-memory.png', 'electron-changelog.png']) {
   const screenshotPath = path.join(root, '..', 'docs', 'screenshots', screenshot);
   assert.ok(fs.existsSync(screenshotPath) && fs.statSync(screenshotPath).size > 1000, `missing screenshot: ${screenshot}`);
 }

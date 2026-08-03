@@ -12,7 +12,8 @@ preserved without inspection or staging. The current Electron pass also adds a
 native inline Quick launch app browser, a complete tool catalog, independent
 tab-search regex state, a full-history changelog, persistent tab groups with
 reviewable bulk-close actions, a public catalog-backed release code name, and
-quiet runtime repair for the Electron binary cache. The next verification pass
+quiet runtime repair for the Electron binary cache. This pass adds a persisted
+Memory page with Git-backed local revisions and append-only restores. The next verification pass
 should run the Windows-only headless desktop tests and a second-computer LAN
 check. Static Python compilation and model tests do not prove those runtime
 boundaries.
@@ -43,8 +44,9 @@ Verification so far:
 - GitHub Project access is externally blocked because the configured owner token
   lacks `read:project`/`project`; no focus-stealing browser authorization was opened.
 - Electron `npm run check` passed the Node syntax and renderer contract checks;
-  `npm run capture` produced four real off-screen screenshots, including the
-  tab-group and bulk-close surface; `npm run package`
+  `npm run capture` produced five real off-screen screenshots, including the
+  tab-group, bulk-close, and memory-checkpoint surfaces; the fresh-profile
+  memory self-test created two distinct local Git revisions; `npm run package`
   produced the Squirrel.Windows installer; and the packaged executable exited
   successfully through the off-screen capture path. `npm audit --audit-level=high`
   reported zero vulnerabilities.

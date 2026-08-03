@@ -63,10 +63,18 @@ behind startup behavior.
 ## Verification
 
 Run `npm run check`, `npm run capture`, and `npm run package` from `electron/`.
-The current local evidence includes 35 Python tests, three real off-screen
-renderer captures, a successful Squirrel package, and a packaged executable
-smoke test. A second-computer LAN check, full accessibility audit, and
-simultaneous multi-agent desktop proof remain host-specific follow-up evidence.
+The current local evidence includes 36 Python tests, five real off-screen
+renderer captures, the fresh-profile memory Git self-test, a successful
+Squirrel package, and a packaged executable smoke test. A second-computer LAN
+check, full accessibility audit, and simultaneous multi-agent desktop proof
+remain host-specific follow-up evidence.
+
+Memory checkpoints are named snapshots of settings, saved connections, agent
+lanes, and tab layout. A restore is recorded as a new revision. The version
+snapshot is kept in an isolated Git repository inside the app's own data
+directory, never inside a user's project folder; if Git is unavailable, the
+checkpoint remains available as a snapshot-only record and the failure is shown
+in its metadata.
 
 ## Suggested articles
 
@@ -74,4 +82,5 @@ simultaneous multi-agent desktop proof remain host-specific follow-up evidence.
 - [Trusted-LAN API](trusted-lan-api.md)
 - [Subagent lanes](subagent-lanes.md)
 - [Tab groups and bulk close](tab-management.md)
+- [Memory checkpoints and local revisions](memory-checkpoints.md)
 - [Quiet processes](quiet-processes.md)

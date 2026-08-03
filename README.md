@@ -57,6 +57,33 @@ server also exposes the primitives needed to automate and verify them end to end
 > clicking, typing, killing processes and running shell/elevated commands with your
 > user's privileges. Only register it in environments where that is acceptable.
 
+<details><summary>Sanitized shared agent-instructions mirror</summary>
+
+This public repository carries a sanitized mirror of the shared agent
+instructions. The canonical instructions remain the source of truth.
+
+- Apply safety, accessibility, language, Material 3, appearance, search, tabs,
+  export, notification, and version-history rules to every app and Pages
+  surface, including nested dialogs and documentation.
+- Use headless computer-use first; keep child processes console-free and never
+  steal focus. Use visible handoff only when required, with an emergency exit.
+- Keep secrets out of chat, source, arguments, URLs, logs, screenshots, and
+  history. Use a temporary secure intake for sensitive values.
+- Use `git` and `gh` for repository work. Preserve unrelated changes, commit
+  and push intended work to the default branch, prove the pushed SHA, and never
+  force-push or delete unmerged work.
+- Keep README, feature articles, roadmap, handoff, wiki, Pages, API docs,
+  changelog, screenshots, issue evidence, and releases truthful and current.
+- Ship English, playful Hong Kong Cantonese, and bilingual modes with two
+  persisted funny-level controls; humour changes voice, never facts.
+- Provide a bounded local regex builder beside every search, complete tabs and
+  bulk actions, accessible Material 3 appearance editing, command palette,
+  export, local append-only revisions, and restore-as-new-revision behavior.
+- Test before publishing one unique real release per push/dispatch, verify
+  hosted checks and live endpoints, and use only verified local/catalog assets.
+
+</details>
+
 ## Electron manual client
 
 The Electron client is the local GUI for the same MCP surface. It creates
@@ -73,6 +100,8 @@ its binary cache is missing. Quick launch has an inline application browser;
 the Tool runner has file and folder browsers that write safe JSON path values.
 The Tab manager supports named groups, persistent collapse state, searchable
 context menus, and reviewable bulk close by visible tab text with optional regex.
+The Memory page saves settings, connections, subagent lanes, and tab layout as
+named local checkpoints; restores create new Git-backed revisions in app data.
 Each build also carries a factual public dim-sum code name and catalog-photo link
 in the Manual and Changelog surfaces; the photo is referenced, never copied.
 The Windows release target is Squirrel.Windows and the local packaging command
@@ -88,6 +117,8 @@ terminal or visible desktop window was opened while they were produced.
 ![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
 
 ![Electron Tab manager showing groups and reviewable bulk close](docs/screenshots/electron-tab-management.png)
+
+![Electron Memory page showing local checkpoint controls](docs/screenshots/electron-memory.png)
 
 ![Electron Changelog showing date filtering, regex search, and commit evidence](docs/screenshots/electron-changelog.png)
 

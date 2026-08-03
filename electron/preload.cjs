@@ -27,5 +27,8 @@ contextBridge.exposeInMainWorld('lowlevel', {
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   browsePath: (kind) => ipcRenderer.invoke('browse:path', kind),
   getChangelog: () => ipcRenderer.invoke('changelog:get'),
-  getReleaseCodename: () => ipcRenderer.invoke('release:codename')
+  getReleaseCodename: () => ipcRenderer.invoke('release:codename'),
+  getMemory: () => ipcRenderer.invoke('memory:list'),
+  createMemoryCheckpoint: (label) => ipcRenderer.invoke('memory:create', label),
+  restoreMemoryCheckpoint: (id) => ipcRenderer.invoke('memory:restore', id)
 });

@@ -20,6 +20,46 @@ const appendJson = (name, value, limit = 200) => {
   writeJson(name, entries.slice(0, limit));
   return entries[0];
 };
+const memoryFallback = () => ({
+  settings: readJson('settings.json', {
+    language: 'English', englishFunny: 1, cantoneseFunny: 1, theme: 'dark',
+    density: 'comfortable', accent: '#8ab4f8', fontScale: 1,
+    appearance: { font: 'Segoe UI', weight: 400, radius: 20, surface: '#1a1d24', text: '#e4e1e9', accent: '#aec6ff' }
+  }),
+  connections: readJson('connections.json', []),
+  agents: readJson('agents.json', []),
+  tabs: readJson('tabs.json', {
+    order: ['workspace', 'runner', 'history', 'settings', 'notifications', 'changelog', 'help', 'memory'],
+    pinned: ['workspace'],
+    groups: { core: { label: 'Core', collapsed: false, tabs: ['workspace', 'runner'] }, records: { label: 'Records', collapsed: false, tabs: ['history', 'notifications', 'changelog'] }, customize: { label: 'Customize', collapsed: false, tabs: ['settings', 'help', 'memory'] } }
+  })
+});
+const versionRepoDir = () => path.join(stateDir(), 'local-versions');
+const gitExecutable = () => process.platform === 'win32' ? 'git.exe' : 'git';
+async function recordLocalVersion(state, message) {
+  const directory = versionRepoDir();
+  fs.mkdirSync(directory, { recursive: true });
+  const snapshotPath = path.join(directory, 'current-state.json');
+  fs.writeFileSync(snapshotPath, JSON.stringify(state, null, 2), 'utf8');
+  if (!fs.existsSync(path.join(directory, '.git'))) {
+    const initialized = await runHidden(gitExecutable(), ['init'], { cwd: directory });
+    if (!initialized.ok) return { ok: false, error: initialized.stderr || initialized.stdout || 'Local version repository could not be initialized.' };
+    await runHidden(gitExecutable(), ['config', 'user.name', 'Low-Level Manual'], { cwd: directory });
+    await runHidden(gitExecutable(), ['config', 'user.email', 'local@lowlevel.invalid'], { cwd: directory });
+  }
+  const staged = await runHidden(gitExecutable(), ['add', 'current-state.json'], { cwd: directory });
+  if (!staged.ok) return { ok: false, error: staged.stderr || staged.stdout || 'Local version snapshot could not be staged.' };
+  const committed = await runHidden(gitExecutable(), ['commit', '--allow-empty', '-m', message], { cwd: directory });
+  if (!committed.ok) return { ok: false, error: committed.stderr || committed.stdout || 'Local version snapshot could not be committed.' };
+  const revision = await runHidden(gitExecutable(), ['rev-parse', 'HEAD'], { cwd: directory });
+  return { ok: true, revision: revision.stdout.trim() };
+}
+async function runMemorySelfTest() {
+  const state = memoryFallback();
+  const first = await recordLocalVersion(state, 'Memory self-test checkpoint');
+  const second = await recordLocalVersion({ ...state, selfTest: new Date().toISOString() }, 'Memory self-test restore');
+  return { ok: first.ok && second.ok, firstRevision: first.revision || null, secondRevision: second.revision || null, error: first.error || second.error || null };
+}
 
 function commandSpec() {
   if (process.platform === 'win32') return { file: 'uv.exe', prefix: ['run', '--directory', repoDir, 'lowlevel-computer-use-cheap'] };
@@ -205,6 +245,7 @@ async function captureScreenshots(outputDir) {
     ['electron-workspaces.png', 'workspace'],
     ['electron-settings.png', 'settings'],
     ['electron-tab-management.png', 'settings-tabs'],
+    ['electron-memory.png', 'memory'],
     ['electron-changelog.png', 'changelog']
   ];
   for (const [filename, tab] of captures) {
@@ -234,20 +275,47 @@ app.whenReady().then(() => {
   ipcMain.handle('startup:install', (_event, host, port, admin) => startupAction('install-startup', host, port, admin));
   ipcMain.handle('startup:remove', () => startupAction('uninstall-startup', '127.0.0.1', 8765, false));
   ipcMain.handle('startup:status', () => startupAction('startup-status', '127.0.0.1', 8765, false));
-  ipcMain.handle('settings:get', () => readJson('settings.json', {
-    language: 'English', englishFunny: 1, cantoneseFunny: 1, theme: 'dark', density: 'comfortable', accent: '#8ab4f8', fontScale: 1
-  }));
+  ipcMain.handle('settings:get', () => memoryFallback().settings);
   ipcMain.handle('settings:set', (_event, settings) => { writeJson('settings.json', settings); return settings; });
   ipcMain.handle('history:get', () => readJson('history.json', []));
   ipcMain.handle('notifications:get', () => readJson('notifications.json', []));
   ipcMain.handle('notifications:add', (_event, notification) => appendJson('notifications.json', notification, 300));
   ipcMain.handle('notifications:clear', () => { writeJson('notifications.json', []); return []; });
   ipcMain.handle('tabs:get', () => readJson('tabs.json', {
-    order: ['workspace', 'runner', 'history', 'settings', 'notifications', 'changelog', 'help'],
+    order: ['workspace', 'runner', 'history', 'settings', 'notifications', 'changelog', 'help', 'memory'],
     pinned: ['workspace'],
-    groups: { core: { label: 'Core', collapsed: false, tabs: ['workspace', 'runner'] }, records: { label: 'Records', collapsed: false, tabs: ['history', 'notifications', 'changelog'] }, customize: { label: 'Customize', collapsed: false, tabs: ['settings', 'help'] } }
+    groups: { core: { label: 'Core', collapsed: false, tabs: ['workspace', 'runner'] }, records: { label: 'Records', collapsed: false, tabs: ['history', 'notifications', 'changelog'] }, customize: { label: 'Customize', collapsed: false, tabs: ['settings', 'help', 'memory'] } }
   }));
   ipcMain.handle('tabs:set', (_event, tabs) => { writeJson('tabs.json', tabs); return tabs; });
+  ipcMain.handle('memory:list', () => readJson('memory.json', []));
+  ipcMain.handle('memory:create', async (_event, label) => {
+    const state = memoryFallback();
+    const entry = { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, label: String(label || 'Manual checkpoint').trim() || 'Manual checkpoint', at: new Date().toISOString(), action: 'checkpoint created', state };
+    const entries = [entry, ...readJson('memory.json', [])].slice(0, 100);
+    writeJson('memory.json', entries);
+    const revision = await recordLocalVersion(state, `Create memory checkpoint: ${entry.label}`);
+    entry.revision = revision.revision || null;
+    entry.versioning = revision.ok ? 'git-backed' : 'snapshot-only';
+    if (!revision.ok) entry.versionError = revision.error;
+    writeJson('memory.json', entries);
+    return entry;
+  });
+  ipcMain.handle('memory:restore', async (_event, id) => {
+    const entries = readJson('memory.json', []);
+    const source = entries.find((entry) => entry.id === id);
+    if (!source?.state) return { ok: false, error: 'Memory checkpoint not found.' };
+    writeJson('settings.json', source.state.settings);
+    writeJson('connections.json', source.state.connections);
+    writeJson('agents.json', source.state.agents);
+    writeJson('tabs.json', source.state.tabs);
+    const restored = { ...source, id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, at: new Date().toISOString(), action: 'checkpoint restored', restoredFrom: source.id };
+    const revision = await recordLocalVersion(source.state, `Restore memory checkpoint: ${source.label}`);
+    restored.revision = revision.revision || null;
+    restored.versioning = revision.ok ? 'git-backed' : 'snapshot-only';
+    if (!revision.ok) restored.versionError = revision.error;
+    writeJson('memory.json', [restored, ...entries].slice(0, 100));
+    return { ok: true, state: source.state, entry: restored };
+  });
   ipcMain.handle('export:text', (_event, text) => {
     const file = path.join(app.getPath('downloads'), `lowlevel-manual-${Date.now()}.md`);
     fs.writeFileSync(file, text, 'utf8');
@@ -266,7 +334,8 @@ app.whenReady().then(() => {
     return result.canceled ? null : result.filePaths[0];
   });
   const captureArgument = process.argv.find((argument) => argument.startsWith('--capture-dir='));
-  if (captureArgument) captureScreenshots(path.resolve(captureArgument.slice('--capture-dir='.length)));
+  if (process.argv.includes('--memory-self-test')) runMemorySelfTest().then((result) => { process.stdout.write(JSON.stringify(result) + '\n'); app.quit(); });
+  else if (captureArgument) captureScreenshots(path.resolve(captureArgument.slice('--capture-dir='.length)));
   else createWindow();
   if (process.platform === 'win32') bootstrap();
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
