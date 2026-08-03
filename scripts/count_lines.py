@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import subprocess
 from collections import defaultdict
 from pathlib import Path
@@ -61,7 +62,7 @@ def agent_commits() -> set[str]:
             continue
         commit, author, email, body = fields
         marker = f"{author} {email} {body}".lower()
-        if any(token in marker for token in ("github-actions[bot]", "claude", "codex", "openai", "smoke user", "co-authored-by: agent")):
+        if any(token in marker for token in ("github-actions[bot]", "claude", "codex", "openai", "co-authored-by: agent")):
             result.add(commit)
     return result
 
@@ -74,7 +75,7 @@ def agent_lines(paths: list[str], commits: set[str]) -> int:
         except subprocess.CalledProcessError:
             continue
         for line in blame:
-            if line and not line.startswith((" ", "author ", "author-mail ", "author-time ", "author-tz ", "committer ", "committer-mail ", "committer-time ", "committer-tz ", "summary ", "filename ", "previous ", "boundary")):
+            if re.match(r"^[0-9a-f]{40} ", line):
                 commit = line.split(" ", 1)[0]
                 if commit in commits:
                     total += 1
