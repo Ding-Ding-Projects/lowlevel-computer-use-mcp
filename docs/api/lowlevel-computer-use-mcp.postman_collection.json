@@ -1,0 +1,72 @@
+{
+  "info": {
+    "name": "lowlevel-computer-use-mcp — master API collection",
+    "description": "Local MCP Streamable HTTP handshake and a read-only tool call.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8765/mcp" },
+    { "key": "mcpSessionId", "value": "" },
+    { "key": "protocolVersion", "value": "2025-11-25" }
+  ],
+  "item": [
+    {
+      "name": "1. Initialize",
+      "event": [{
+        "listen": "test",
+        "script": { "exec": ["const id = pm.response.headers.get('MCP-Session-Id');", "if (id) pm.collectionVariables.set('mcpSessionId', id);"] }
+      }],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json, text/event-stream" }
+        ],
+        "body": { "mode": "raw", "raw": "{\n  \"jsonrpc\": \"2.0\",\n  \"id\": 1,\n  \"method\": \"initialize\",\n  \"params\": {\n    \"protocolVersion\": \"{{protocolVersion}}\",\n    \"capabilities\": {},\n    \"clientInfo\": {\"name\": \"Postman\", \"version\": \"1.0\"}\n  }\n}" },
+        "url": "{{baseUrl}}"
+      }
+    },
+    {
+      "name": "2. Initialized notification",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json, text/event-stream" },
+          { "key": "MCP-Session-Id", "value": "{{mcpSessionId}}" },
+          { "key": "MCP-Protocol-Version", "value": "{{protocolVersion}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}" },
+        "url": "{{baseUrl}}"
+      }
+    },
+    {
+      "name": "3. List tools",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json, text/event-stream" },
+          { "key": "MCP-Session-Id", "value": "{{mcpSessionId}}" },
+          { "key": "MCP-Protocol-Version", "value": "{{protocolVersion}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}" },
+        "url": "{{baseUrl}}"
+      }
+    },
+    {
+      "name": "4. Safe tool call — screen size",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Accept", "value": "application/json, text/event-stream" },
+          { "key": "MCP-Session-Id", "value": "{{mcpSessionId}}" },
+          { "key": "MCP-Protocol-Version", "value": "{{protocolVersion}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{\"jsonrpc\":\"2.0\",\"id\":3,\"method\":\"tools/call\",\"params\":{\"name\":\"get_screen_size\",\"arguments\":{}}}" },
+        "url": "{{baseUrl}}"
+      }
+    }
+  ]
+}

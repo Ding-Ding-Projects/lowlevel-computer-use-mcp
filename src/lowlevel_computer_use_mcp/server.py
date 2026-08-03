@@ -28,7 +28,6 @@ import json
 import math
 import os
 import platform
-import shutil
 import subprocess
 import sys
 import tempfile
@@ -44,6 +43,8 @@ from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from .process import run_hidden
+
+from .processes import hidden_server_command, hidden_subprocess_kwargs, pythonw_executable
 
 # --------------------------------------------------------------------------- #
 # Optional / platform dependencies (imported lazily-safely so the server can
@@ -214,10 +215,14 @@ GOLDEN RULES
   1. Look before acting: screenshot (full or screenshot(hwnd=...)) to see state.
   2. Resolve handles at run time (list_windows -> list_child_windows); NEVER
      hard-code handles — they change every launch.
-  3. Prefer BACKGROUND targeting so you don't steal the user's focus.
-  4. Foreground mouse uses SCREEN pixels; background clicks use CLIENT coords of
+  3. HEADLESS FIRST: launch GUI apps on a Windows off-screen desktop or Linux
+     Xvfb. Keep the user's visible desktop, cursor, keyboard focus, and foreground
+     application completely untouched.
+  4. Use BACKGROUND targeting inside that headless desktop. Foreground tools are
+     focus-protected by default and require explicit per-call confirmation.
+  5. Foreground mouse uses SCREEN pixels; background clicks use CLIENT coords of
      the target window.
-  5. Verify after acting (re-screenshot). 6. Pair every create with a destroy/stop.
+  6. Verify after acting (re-screenshot). 7. Pair every create with a destroy/stop.
 
 FULL TOOL CATALOG (names are the tools)
 - Mouse/keyboard (X-platform): get_screen_size, get_cursor_position, mouse_move,
@@ -254,8 +259,8 @@ BACKGROUND / UNFOCUSED CONTROL (first-class). Workflow:
   4. screenshot(hwnd=) to see the result without bringing the window forward.
   Background input uses Win32 PostMessage/WM_CHAR (Windows) or XSendEvent (Linux);
   some apps ignore synthetic events (raw input / physical-key checks / xterm with
-  allowSendEvents off) — then use win_set_control_text, AHK ahk_control_send, or
-  focus the window first.
+  allowSendEvents off) — do not fall back to focus while the user is active. Try
+  win_set_control_text or AHK ahk_control_send, then report the limitation.
 
 CROSS-PLATFORM. The same tools work on Windows and Linux. On Linux `hwnd` is an X11
 window id; window mgmt/background input/per-window capture use xdotool/wmctrl/
@@ -264,9 +269,10 @@ ImageMagick. The Linux 'headless with GUI' is an Xvfb virtual display — pass t
 host you can spin up a throwaway Linux box with wsl_create_temp -> wsl_run ->
 wsl_destroy. Check availability with linux_status / ahk_status / wsl_status.
 
-SHOW-FOR-LOGIN. If automation hits a human-only login: show a normal window with
-show_window (hide_window after), or a whole Windows headless desktop with
-show_headless_desktop (hide_headless_desktop after).
+SHOW-FOR-LOGIN. These tools intentionally interrupt the foreground and are locked
+behind confirm_focus_disruption=true. Use them only after the user explicitly
+requests the handoff. Prefer showing the headless desktop; hide it immediately
+afterwards. Never use this fallback merely because background input failed.
 
 MACROS AS SKILLS. When you perform a multi-step UI sequence the user is likely to
 repeat ("open app X, click here, type this, save"), DO NOT leave it as ad-hoc tool
@@ -372,10 +378,23 @@ def _require(module: Any, name: str) -> Optional[str]:
     return None
 
 
+def _focus_guard(confirmed: bool, operation: str) -> Optional[str]:
+    """Block foreground-affecting actions unless the caller explicitly confirms."""
+    if confirmed:
+        return None
+    return _err(
+        f"{operation} is blocked by focus protection. Use a headless desktop and "
+        "background hwnd/window_title targeting. Set confirm_focus_disruption=true "
+        "only after the user explicitly asks to hand over the visible desktop.",
+        focus_protected=True,
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Admin / elevation + boot-startup helpers (Windows)
 # --------------------------------------------------------------------------- #
 TASK_NAME = "LowLevelComputerUseMCP"
+STARTUP_SCRIPT_NAME = f"{TASK_NAME}.vbs"
 DEFAULT_HTTP_HOST = os.environ.get("LOWLEVEL_CU_HOST", "127.0.0.1")
 DEFAULT_HTTP_PORT = int(os.environ.get("LOWLEVEL_CU_PORT", "8765"))
 DEFAULT_REMOTE_DESKTOP = "LowLevelCURemote"
@@ -384,15 +403,6 @@ DEFAULT_REMOTE_DESKTOP = "LowLevelCURemote"
 def _repo_dir() -> Path:
     """Path to the cloned repo root (parent of the src/ package)."""
     return Path(__file__).resolve().parents[2]
-
-
-def _uv_path() -> str:
-    """Best-effort absolute path to the uv launcher used to run this server."""
-    found = shutil.which("uv")
-    if found:
-        return found
-    candidate = Path.home() / ".local" / "bin" / ("uv.exe" if os.name == "nt" else "uv")
-    return str(candidate) if candidate.exists() else "uv"
 
 
 def _is_admin() -> bool:
@@ -409,11 +419,20 @@ def _is_admin() -> bool:
 
 
 def _server_launch_argument(http: bool, host: str, port: int) -> str:
-    """The argument string passed to uv to start this server (for a scheduled task)."""
-    parts = ["run", "--directory", str(_repo_dir()), "lowlevel-computer-use-mcp"]
+    """Argument string passed to console-free Python for a scheduled task."""
+    parts = ["-m", "lowlevel_computer_use_mcp.server"]
     if http:
         parts += ["--http", "--host", host, "--port", str(port)]
     return subprocess.list2cmdline(parts)
+
+
+def _startup_script_path() -> Path:
+    appdata = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
+    return appdata / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Startup" / STARTUP_SCRIPT_NAME
+
+
+def _vbs_string(value: str) -> str:
+    return '"' + value.replace('"', '""') + '"'
 
 
 def _clean_transcript(text: str) -> str:
@@ -436,6 +455,8 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
     if os.name != "nt":
         return {"ok": False, "returncode": -1, "output": "Admin/startup features require Windows."}
 
+    body = "$ErrorActionPreference = 'Stop'\n" + body
+
     if not require_admin or _is_admin():
         try:
             proc = run_hidden(
@@ -443,6 +464,8 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
                 capture_output=True,
                 text=True,
                 timeout=timeout,
+                check=False,
+                **hidden_subprocess_kwargs(),
             )
             return {
                 "ok": proc.returncode == 0,
@@ -460,7 +483,7 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
     try:
         wrapped = (
             f"Start-Transcript -Path '{log_path}' -Force | Out-Null\n"
-            f"try {{\n{body}\n}} catch {{ Write-Output \"ERROR: $($_.Exception.Message)\" }}\n"
+            f"try {{\n{body}\n}} catch {{ Write-Output \"ERROR: $($_.Exception.Message)\"; exit 1 }}\n"
             f"Stop-Transcript | Out-Null\n"
         )
         Path(ps1_path).write_text(wrapped, encoding="utf-8")
@@ -474,6 +497,8 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
             capture_output=True,
             text=True,
             timeout=timeout,
+            check=False,
+            **hidden_subprocess_kwargs(),
         )
         output = ""
         if Path(log_path).exists():
@@ -493,14 +518,34 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
 
 def _install_startup(http: bool, host: str, port: int, run_as_admin: bool) -> dict[str, Any]:
     """Register a scheduled task that starts this server at user logon."""
-    uv = _uv_path()
+    executable, _ = hidden_server_command()
     arg = _server_launch_argument(http, host, port).replace("'", "''")
-    uv_q = uv.replace("'", "''")
+    if not run_as_admin:
+        path = _startup_script_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        command = subprocess.list2cmdline([executable]) + " " + _server_launch_argument(http, host, port)
+        script = (
+            "Option Explicit\n"
+            "Dim shell\n"
+            "Set shell = CreateObject(\"WScript.Shell\")\n"
+            f"shell.CurrentDirectory = {_vbs_string(str(_repo_dir()))}\n"
+            f"shell.Run {_vbs_string(command)}, 0, False\n"
+        )
+        # Windows Script Host reliably recognizes UTF-16LE with a BOM. UTF-8
+        # BOM files are rejected without a useful diagnostic on some builds.
+        path.write_text(script, encoding="utf-16")
+        return {
+            "ok": True,
+            "returncode": 0,
+            "output": f"Installed console-free user startup launcher at {path}.",
+            "method": "startup-folder-pythonw",
+        }
+    executable_q = executable.replace("'", "''")
     repo_q = str(_repo_dir()).replace("'", "''")
     run_level = "Highest" if run_as_admin else "Limited"
     body = (
         "$user = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name\n"
-        f"$action = New-ScheduledTaskAction -Execute '{uv_q}' -Argument '{arg}' -WorkingDirectory '{repo_q}'\n"
+        f"$action = New-ScheduledTaskAction -Execute '{executable_q}' -Argument '{arg}' -WorkingDirectory '{repo_q}'\n"
         "$trigger = New-ScheduledTaskTrigger -AtLogOn\n"
         f"$principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel {run_level}\n"
         "$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries "
@@ -509,29 +554,37 @@ def _install_startup(http: bool, host: str, port: int, run_as_admin: bool) -> di
         "-Principal $principal -Settings $settings -Force | Out-Null\n"
         f"Write-Output 'Installed scheduled task {TASK_NAME} (RunLevel={run_level}, AtLogon).'\n"
     )
-    return _run_powershell(body, require_admin=True)
+    return _run_powershell(body, require_admin=run_as_admin)
 
 
 def _uninstall_startup() -> dict[str, Any]:
     """Remove the boot-startup scheduled task."""
+    script = _startup_script_path()
+    removed_script = script.exists()
+    if removed_script:
+        script.unlink()
     body = (
         f"if (Get-ScheduledTask -TaskName '{TASK_NAME}' -ErrorAction SilentlyContinue) {{\n"
         f"  Unregister-ScheduledTask -TaskName '{TASK_NAME}' -Confirm:$false\n"
         f"  Write-Output 'Removed scheduled task {TASK_NAME}.'\n"
-        "} else { Write-Output 'Task was not installed.' }\n"
+        f"}} else {{ Write-Output 'Task was not installed. Startup script removed={str(removed_script).lower()}.' }}\n"
     )
-    return _run_powershell(body, require_admin=True)
+    # Never summon UAC during removal. A non-admin caller can remove the user
+    # launcher; an elevated task returns a truthful permission error instead.
+    return _run_powershell(body, require_admin=False)
 
 
 def _startup_status() -> dict[str, Any]:
     """Report whether the boot-startup scheduled task is installed."""
+    script = _startup_script_path()
+    script_q = str(script).replace("'", "''")
     body = (
         f"$t = Get-ScheduledTask -TaskName '{TASK_NAME}' -ErrorAction SilentlyContinue\n"
         "if ($t) {\n"
         "  $i = $t | Get-ScheduledTaskInfo\n"
         "  $lvl = $t.Principal.RunLevel\n"
         "  Write-Output \"INSTALLED|State=$($t.State)|RunLevel=$lvl|LastRun=$($i.LastRunTime)|NextRun=$($i.NextRunTime)\"\n"
-        "} else { Write-Output 'NOT_INSTALLED' }\n"
+        f"}} else {{ Write-Output 'STARTUP_SCRIPT|Installed={str(script.exists()).lower()}|Path={script_q}' }}\n"
     )
     return _run_powershell(body, require_admin=False)
 
@@ -606,6 +659,10 @@ class MoveInput(BaseModel):
         default=False,
         description="Set true only when you intentionally want the cursor to jump instantly.",
     )
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Must be true after explicit user consent; moving the shared cursor disrupts focus-sensitive activity.",
+    )
 
 
 @mcp.tool(
@@ -627,6 +684,8 @@ async def mouse_move(params: MoveInput) -> str:
     Returns:
         str: JSON with the resulting cursor position.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground mouse movement")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     _smooth_mouse_move_to(params.x, params.y, duration=params.duration, instant=params.instant)
@@ -671,6 +730,10 @@ class ClickInput(BaseModel):
     display: Optional[int] = Field(
         default=None, description="Linux only: X display number of the target window (e.g. Xvfb 99)"
     )
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Required only for a foreground click after explicit user consent; background targets remain safe.",
+    )
 
 
 @mcp.tool(
@@ -705,6 +768,12 @@ async def mouse_click(params: ClickInput) -> str:
         if params.x is None or params.y is None:
             return _err("Background click requires explicit client x and y coordinates.")
         if IS_LINUX:
+            if params.display is None:
+                if (e := _focus_guard(
+                    params.confirm_focus_disruption,
+                    "X11 click on the user's visible display",
+                )):
+                    return e
             if (e := _require(linuxio, "linuxio")):
                 return e
             try:
@@ -727,6 +796,8 @@ async def mouse_click(params: ClickInput) -> str:
         except winio.WinIOError as exc:
             return _err(str(exc))
 
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground mouse click")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     kwargs: dict[str, Any] = {
@@ -756,6 +827,7 @@ class DragInput(BaseModel):
     end_y: int = Field(..., description="End Y coordinate", ge=0)
     button: MouseButton = Field(default=MouseButton.LEFT, description="Button held during drag")
     duration: float = Field(default=0.25, description="Seconds to animate the drag", ge=0, le=10)
+    confirm_focus_disruption: bool = Field(default=False, description="Required after explicit user consent.")
 
 
 @mcp.tool(
@@ -777,6 +849,8 @@ async def mouse_drag(params: DragInput) -> str:
     Returns:
         str: JSON describing the drag.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground mouse drag")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     if params.start_x is not None and params.start_y is not None:
@@ -801,6 +875,7 @@ class ScrollInput(BaseModel):
         le=10,
     )
     instant_move: bool = Field(default=False, description="Jump to x/y before scrolling.")
+    confirm_focus_disruption: bool = Field(default=False, description="Required after explicit user consent.")
 
 
 @mcp.tool(
@@ -822,6 +897,8 @@ async def mouse_scroll(params: ScrollInput) -> str:
     Returns:
         str: JSON confirming the scroll amount.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground mouse scroll")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     if params.x is not None and params.y is not None:
@@ -844,6 +921,10 @@ class TypeInput(BaseModel):
     )
     display: Optional[int] = Field(
         default=None, description="Linux only: X display number of the target window (e.g. Xvfb 99)"
+    )
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Required only for typing into the current foreground after explicit user consent.",
     )
 
 
@@ -891,6 +972,8 @@ async def type_text(params: TypeInput) -> str:
         except winio.WinIOError as exc:
             return _err(str(exc))
 
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground typing")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     pyautogui.typewrite(params.text, interval=params.interval)
@@ -921,6 +1004,7 @@ class HotkeyInput(BaseModel):
         default=True,
         description="Use AutoHotkey ControlSend when installed, then fall back to Win32 messages.",
     )
+    confirm_focus_disruption: bool = Field(default=False, description="Required after explicit user consent.")
 
 
 @mcp.tool(
@@ -972,7 +1056,8 @@ async def press_keys(params: HotkeyInput) -> str:
             return _ok(mode="background-win32", window_hwnd=top, **winio.send_keys(top, keys))
         except winio.WinIOError as exc:
             return _err(str(exc))
-
+    if (e := _focus_guard(params.confirm_focus_disruption, "Foreground key press")):
+        return e
     if (e := _require(pyautogui, "pyautogui")):
         return e
     if len(keys) == 1:
@@ -1032,6 +1117,8 @@ async def run_command(params: RunCommandInput) -> str:
             capture_output=True,
             text=True,
             timeout=params.timeout,
+            check=False,
+            **hidden_subprocess_kwargs(),
         )
         return _ok(
             returncode=proc.returncode,
@@ -1339,6 +1426,7 @@ class WindowActionName(str, Enum):
 
 class WindowActionInput(WindowTargetInput):
     action: WindowActionName = Field(..., description="Window action to perform")
+    confirm_focus_disruption: bool = Field(default=False, description="Required after explicit user consent.")
 
 
 @mcp.tool(
@@ -1363,6 +1451,8 @@ async def window_action(params: WindowActionInput) -> str:
     Returns:
         str: JSON confirming the action, or an error if the window was not found.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Visible-desktop window action")):
+        return e
     if IS_LINUX:
         if (e := _require(linuxio, "linuxio")):
             return e
@@ -2079,6 +2169,10 @@ class ShowHeadlessDesktopInput(HeadlessDesktopInput):
         min_length=1,
         max_length=240,
     )
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Must be true after the user explicitly requests an interactive desktop handoff.",
+    )
 
 
 @mcp.tool(
@@ -2257,6 +2351,13 @@ async def close_headless_desktop(params: HeadlessDesktopInput) -> str:
 # =========================================================================== #
 # TEMPORARY VISIBILITY (show for login, then hide again)
 # =========================================================================== #
+class ShowWindowInput(WinTargetInput):
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Must be true after the user explicitly requests a visible foreground handoff.",
+    )
+
+
 @mcp.tool(
     name="show_window",
     annotations={
@@ -2267,7 +2368,7 @@ async def close_headless_desktop(params: HeadlessDesktopInput) -> str:
         "openWorldHint": True,
     },
 )
-async def show_window(params: WinTargetInput) -> str:
+async def show_window(params: ShowWindowInput) -> str:
     """Make a hidden/minimized window visible and bring it to the foreground.
 
     Useful when an automated app on the normal desktop hits a step that needs the
@@ -2280,6 +2381,8 @@ async def show_window(params: WinTargetInput) -> str:
     Returns:
         str: JSON {"ok": true, "hwnd": N, "visible": true}.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Showing a foreground window")):
+        return e
     if IS_LINUX:
         if (e := _require(linuxio, "linuxio")):
             return e
@@ -2368,6 +2471,8 @@ async def show_headless_desktop(params: ShowHeadlessDesktopInput) -> str:
         str: JSON {"ok": true, "name": "...", "visible": true,
         "safety_banner": true, "note": "..."}.
     """
+    if (e := _focus_guard(params.confirm_focus_disruption, "Interactive desktop switch")):
+        return e
     if (e := _require(winio, "winio (Windows)")):
         return e
     try:
@@ -2951,6 +3056,10 @@ class RunAsAdminInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     command: str = Field(..., description="Command line to execute with elevation (via cmd.exe)", min_length=1)
     timeout: float = Field(default=120.0, description="Max seconds to wait", ge=1, le=3600)
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Required after explicit user consent because Windows may show a UAC secure-desktop prompt.",
+    )
 
 
 @mcp.tool(
@@ -2978,6 +3087,9 @@ async def run_command_as_admin(params: RunAsAdminInput) -> str:
     """
     if os.name != "nt":
         return _err("run_command_as_admin requires Windows.")
+    if not _is_admin():
+        if (e := _focus_guard(params.confirm_focus_disruption, "UAC elevation prompt")):
+            return e
     escaped = params.command.replace("'", "''")
     body = f"& $env:ComSpec /c '{escaped}'\nexit $LASTEXITCODE"
     needed_prompt = not _is_admin()
@@ -2997,8 +3109,8 @@ async def run_command_as_admin(params: RunAsAdminInput) -> str:
 class InstallStartupInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     run_as_admin: bool = Field(
-        default=True,
-        description="Register the task to run with highest (Administrator) privileges",
+        default=False,
+        description="Opt in to highest privileges; false avoids a UAC focus interruption and is the safe default.",
     )
     http: bool = Field(
         default=True,
@@ -3006,6 +3118,10 @@ class InstallStartupInput(BaseModel):
     )
     host: str = Field(default=DEFAULT_HTTP_HOST, description="Host for HTTP mode")
     port: int = Field(default=DEFAULT_HTTP_PORT, description="Port for HTTP mode", ge=1, le=65535)
+    confirm_focus_disruption: bool = Field(
+        default=False,
+        description="Required only when run_as_admin=true and Windows must display a UAC prompt.",
+    )
 
 
 @mcp.tool(
@@ -3021,10 +3137,8 @@ class InstallStartupInput(BaseModel):
 async def install_startup(params: InstallStartupInput) -> str:
     """Install a scheduled task so this server starts automatically at user logon.
 
-    By default the task runs with Administrator privileges (RunLevel Highest) and
-    launches the server in HTTP mode so it is always available after boot.
-    Registering the task requires elevation - a UAC prompt appears if the server
-    is not already elevated.
+    By default the task runs without elevation and launches the server in HTTP
+    mode through pythonw.exe, so logon produces no terminal or focus change.
 
     Args:
         params (InstallStartupInput): run_as_admin, http, host and port options.
@@ -3034,6 +3148,9 @@ async def install_startup(params: InstallStartupInput) -> str:
     """
     if os.name != "nt":
         return _err("install_startup requires Windows.")
+    if params.run_as_admin and not _is_admin():
+        if (e := _focus_guard(params.confirm_focus_disruption, "UAC elevation prompt")):
+            return e
     result = _install_startup(params.http, params.host, params.port, params.run_as_admin)
     return json.dumps(
         {
@@ -3060,7 +3177,7 @@ async def install_startup(params: InstallStartupInput) -> str:
     },
 )
 async def uninstall_startup() -> str:
-    """Remove the boot-startup scheduled task (requires elevation; may prompt UAC).
+    """Remove user startup without showing UAC; elevated tasks may require an elevated server.
 
     Returns:
         str: JSON {"ok": bool, "output": "...", "task_name": "..."}.
@@ -3095,8 +3212,9 @@ async def startup_status() -> str:
         return _err("startup_status requires Windows.")
     result = _startup_status()
     out = result["output"]
-    installed = out.startswith("INSTALLED")
-    return _ok(installed=installed, details=out, task_name=TASK_NAME)
+    installed = out.startswith("INSTALLED") or out.startswith("STARTUP_SCRIPT|Installed=true")
+    method = "scheduled-task" if out.startswith("INSTALLED") else "startup-folder-pythonw"
+    return _ok(installed=installed, method=method if installed else None, details=out, task_name=TASK_NAME)
 
 
 # =========================================================================== #
@@ -3224,6 +3342,16 @@ def _serve(http: bool, host: str, port: int) -> None:
         mcp.run()
 
 
+def _ensure_standard_streams() -> None:
+    """Give pythonw HTTP startup valid null streams without allocating a console."""
+    if sys.stdin is None:
+        sys.stdin = open(os.devnull, "r", encoding="utf-8")
+    if sys.stdout is None:
+        sys.stdout = open(os.devnull, "w", encoding="utf-8")
+    if sys.stderr is None:
+        sys.stderr = open(os.devnull, "w", encoding="utf-8")
+
+
 def main() -> None:
     """CLI entry point.
 
@@ -3231,6 +3359,8 @@ def main() -> None:
     Subcommands manage the boot-startup scheduled task. Flags switch transport
     and elevation.
     """
+    _ensure_standard_streams()
+
     # Cheap Version fallback: `... cheap <tool> [args]` runs a tool without MCP.
     if len(sys.argv) > 1 and sys.argv[1] == "cheap":
         sys.exit(_cheap_main(sys.argv[2:]))
@@ -3251,7 +3381,12 @@ def main() -> None:
 
     sub = parser.add_subparsers(dest="cmd")
     p_install = sub.add_parser("install-startup", help="Register a logon scheduled task to auto-start the server")
-    p_install.add_argument("--no-admin", action="store_true", help="Do not run the task as Administrator")
+    p_install.add_argument(
+        "--admin-task",
+        action="store_true",
+        help="Opt in to an elevated scheduled task (shows UAC); default uses a console-free user Startup launcher",
+    )
+    p_install.add_argument("--no-admin", action="store_true", help=argparse.SUPPRESS)
     p_install.add_argument("--stdio", action="store_true", help="Start in stdio mode instead of HTTP")
     p_install.add_argument("--host", default=DEFAULT_HTTP_HOST)
     p_install.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT)
@@ -3262,7 +3397,10 @@ def main() -> None:
 
     if args.cmd == "install-startup":
         res = _install_startup(
-            http=not args.stdio, host=args.host, port=args.port, run_as_admin=not args.no_admin
+            http=not args.stdio,
+            host=args.host,
+            port=args.port,
+            run_as_admin=args.admin_task and not args.no_admin,
         )
         print(res["output"])
         sys.exit(0 if res["ok"] else 1)
@@ -3277,14 +3415,13 @@ def main() -> None:
 
     # Serve mode
     if args.admin and os.name == "nt" and not _is_admin():
-        # Relaunch elevated. Note: an elevated process gets its own console, so this
-        # is intended for --http mode (a stdio server must be launched elevated by
-        # its parent client instead).
+        # Relaunch through the GUI-subsystem interpreter so UAC never creates a
+        # terminal window. Stdio elevation still belongs to the parent client.
         forwarded = [a for a in sys.argv[1:] if a != "--admin"]
         params = subprocess.list2cmdline(["-m", "lowlevel_computer_use_mcp.server", *forwarded])
-        # UAC may show the OS consent prompt, but the elevated child itself has
-        # no console window and does not activate a user-facing application.
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 0)
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", pythonw_executable(), params, None, 0
+        )
         sys.exit(0)
 
     _serve(http=args.http, host=args.host, port=args.port)

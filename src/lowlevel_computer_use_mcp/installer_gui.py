@@ -18,10 +18,9 @@ import shutil
 import subprocess
 import sys
 import threading
-from pathlib import Path
-
 import tkinter as tk
-from tkinter import ttk, messagebox
+from pathlib import Path
+from tkinter import ttk
 
 from .process import run_hidden
 
@@ -42,7 +41,11 @@ def uv_path() -> str:
 
 
 def server_args() -> list[str]:
-    return ["run", "--directory", str(repo_dir()), "lowlevel-computer-use-mcp"]
+    return hidden_server_command()[1]
+
+
+def server_command() -> str:
+    return hidden_server_command()[0]
 
 
 def ensure_uv(log) -> bool:
@@ -93,8 +96,9 @@ def action_register_claude(log) -> None:
     log("== Registering with Claude Code (user scope) ==")
     claude = shutil.which("claude")
     if claude:
+        _run([claude, "mcp", "remove", "--scope", "user", SERVER_KEY], log)
         rc = _run(
-            [claude, "mcp", "add", SERVER_KEY, "--scope", "user", "--", uv_path(), *server_args()],
+            [claude, "mcp", "add", SERVER_KEY, "--scope", "user", "--", server_command(), *server_args()],
             log,
         )
         if rc == 0:
@@ -114,7 +118,7 @@ def _register_claude_json(log) -> None:
     data.setdefault("mcpServers", {})
     data["mcpServers"][SERVER_KEY] = {
         "type": "stdio",
-        "command": uv_path(),
+        "command": server_command(),
         "args": server_args(),
         "env": {},
     }
@@ -146,17 +150,25 @@ def action_enable_yolo(log) -> None:
 
 def action_register_codex(log) -> None:
     log("== Registering with Codex (~/.codex/config.toml) ==")
+    codex = shutil.which("codex")
+    if codex:
+        _run([codex, "mcp", "remove", SERVER_KEY], log)
+        rc = _run([codex, "mcp", "add", SERVER_KEY, "--", server_command(), *server_args()], log)
+        if rc == 0:
+            log("Registered via Codex CLI with the console-free launcher.\n")
+            return
+        log("Codex CLI failed; falling back to an additive config entry.")
     path = Path.home() / ".codex" / "config.toml"
     path.parent.mkdir(parents=True, exist_ok=True)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     if CODEX_BLOCK_MARKER in existing:
         log("Already present in config.toml.\n")
         return
-    uv = uv_path().replace("'", "''")
+    executable = server_command().replace("'", "''")
     args = ", ".join(f"'{a}'" for a in server_args())
     block = (
         f"\n{CODEX_BLOCK_MARKER}\n"
-        f"command = '{uv}'\n"
+        f"command = '{executable}'\n"
         f"args = [{args}]\n"
         f"startup_timeout_sec = 60\n"
     )
@@ -165,18 +177,45 @@ def action_register_codex(log) -> None:
     log(f"Appended block to {path}\n")
 
 
+def action_register_opencode(log) -> None:
+    """Register the console-free stdio server in OpenCode's user config."""
+    log("== Registering with OpenCode (~/.config/opencode/opencode.json) ==")
+    config_dir = Path.home() / ".config" / "opencode"
+    jsonc_path = config_dir / "opencode.jsonc"
+    path = jsonc_path if jsonc_path.exists() else config_dir / "opencode.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+    except Exception as exc:  # noqa: BLE001
+        log(f"Could not safely update {path}: {exc}")
+        return
+    mcp = data.setdefault("mcp", {})
+    # Migrate the short-lived nested draft written by older installer builds.
+    nested = mcp.pop("servers", None)
+    if isinstance(nested, dict):
+        mcp.update(nested)
+    mcp[SERVER_KEY] = {
+        "type": "local",
+        "command": [server_command(), *server_args()],
+        "enabled": True,
+    }
+    data.setdefault("$schema", "https://opencode.ai/config.json")
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    log(f"Registered {SERVER_KEY} with the console-free launcher in {path}.\n")
+
+
 def action_install_startup(admin: bool, port: int, log) -> None:
     log(f"== Installing boot startup (admin={admin}, port={port}) ==")
-    cmd = [uv_path(), *server_args(), "install-startup", "--port", str(port)]
-    if not admin:
-        cmd.append("--no-admin")
+    cmd = [server_command(), *server_args(), "install-startup", "--port", str(port)]
+    if admin:
+        cmd.append("--admin-task")
     _run(cmd, log, cwd=str(repo_dir()))
     log("Done.\n")
 
 
 def action_uninstall_startup(log) -> None:
     log("== Removing boot startup ==")
-    _run([uv_path(), *server_args(), "uninstall-startup"], log, cwd=str(repo_dir()))
+    _run([server_command(), *server_args(), "uninstall-startup"], log, cwd=str(repo_dir()))
     log("Done.\n")
 
 
@@ -202,6 +241,12 @@ def action_status(log) -> None:
     log("== Status ==")
     claude_json = Path.home() / ".claude.json"
     codex_toml = Path.home() / ".codex" / "config.toml"
+    opencode_dir = Path.home() / ".config" / "opencode"
+    opencode_json = (
+        opencode_dir / "opencode.jsonc"
+        if (opencode_dir / "opencode.jsonc").exists()
+        else opencode_dir / "opencode.json"
+    )
     claude_ok = False
     if claude_json.exists():
         try:
@@ -209,11 +254,18 @@ def action_status(log) -> None:
         except Exception:  # noqa: BLE001
             pass
     codex_ok = codex_toml.exists() and CODEX_BLOCK_MARKER in codex_toml.read_text(encoding="utf-8")
+    opencode_ok = False
+    if opencode_json.exists():
+        try:
+            opencode_ok = SERVER_KEY in json.loads(opencode_json.read_text(encoding="utf-8")).get("mcp", {})
+        except Exception:  # noqa: BLE001
+            pass
     log(f"Repo:        {repo_dir()}")
     log(f"uv:          {uv_path()}")
     log(f"Claude Code: {'registered' if claude_ok else 'not registered'}")
     log(f"Codex:       {'registered' if codex_ok else 'not registered'}")
-    _run([uv_path(), *server_args(), "startup-status"], log, cwd=str(repo_dir()))
+    log(f"OpenCode:    {'registered' if opencode_ok else 'not registered'}")
+    _run([server_command(), *server_args(), "startup-status"], log, cwd=str(repo_dir()))
     log("")
 
 
@@ -251,7 +303,7 @@ def main() -> None:
     # Options row
     opts = ttk.Frame(root)
     opts.pack(fill="x", padx=12)
-    admin_var = tk.BooleanVar(value=True)
+    admin_var = tk.BooleanVar(value=False)
     port_var = tk.StringVar(value="8765")
     ttk.Checkbutton(opts, text="Startup as Administrator", variable=admin_var).pack(side="left")
     ttk.Label(opts, text="   HTTP port:").pack(side="left")
@@ -278,6 +330,7 @@ def main() -> None:
     add(1, 1, "Remove boot startup", lambda: run_async(action_uninstall_startup))
     add(2, 1, "Install AutoHotkey", lambda: run_async(action_install_ahk))
     add(0, 2, "Check status", lambda: run_async(action_status))
+    add(1, 2, "Register OpenCode", lambda: run_async(action_register_opencode))
     add(2, 2, "Enable YOLO (no prompts)", lambda: run_async(action_enable_yolo))
 
     def do_all() -> None:
@@ -287,6 +340,7 @@ def main() -> None:
             action_install_ahk(_log)
             action_register_claude(_log)
             action_register_codex(_log)
+            action_register_opencode(_log)
             action_enable_yolo(_log)
             action_status(_log)
             _log("===== DONE. Restart Claude Code / Codex to load the server. =====\n")

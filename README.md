@@ -45,7 +45,7 @@ server also exposes the primitives needed to automate and verify them end to end
 - ✂️ **Cropping** — crop any saved image to a sub-region
 - 🎥 **Screen recording** — record a monitor or region to mp4 in the background
 - 🛡️ **Run-as-admin** — per-command UAC elevation or whole-server elevation
-- 🚀 **Auto-start on boot** — register a logon scheduled task (optionally as admin)
+- 🚀 **Silent auto-start** — `pythonw.exe` starts the local HTTP server with no terminal window; elevation is opt-in
 - 🟢 **AutoHotkey add-in** — run AHK scripts; `ControlSend`/`ControlClick` for rock-solid background input
 - 🐧 **Cross-platform** — the same tools work natively on **Linux** (X11 via xdotool/wmctrl), with **Xvfb** virtual displays for headless-with-GUI
 - 🌀 **Ephemeral WSL** — on a Windows host, spin up a throwaway Linux distro on demand, run commands, tear it down
@@ -129,10 +129,12 @@ Enter it:
 cd lowlevel-computer-use-mcp
 ```
 
-Launch the installer (it auto-runs the full install):
+Sync once, then launch the GUI-subsystem installer directly. This avoids creating
+a terminal window for the installer itself:
 
-```bash
-uv run lowlevel-computer-use-mcp-installer
+```powershell
+uv sync
+.\.venv\Scripts\lowlevel-computer-use-mcp-installer.exe
 ```
 
 Then **restart Claude Code / Codex** so they spawn the server.
@@ -201,7 +203,7 @@ Replace the path below with wherever you cloned this repo.
 Register at user scope (one line):
 
 ```bash
-claude mcp add lowlevel-computer-use --scope user -- uv run --directory "C:\path\to\lowlevel-computer-use-mcp" lowlevel-computer-use-mcp
+claude mcp add lowlevel-computer-use --scope user -- "C:\path\to\lowlevel-computer-use-mcp\.venv\Scripts\pythonw.exe" -m lowlevel_computer_use_mcp.server
 ```
 
 Or add this to `~/.claude.json` under `mcpServers`:
@@ -321,7 +323,8 @@ full feature overview on connect.
 
 ## Background / unfocused window targeting
 
-`mouse_click`, `type_text` and `screenshot` accept `hwnd` or `window_title`. When
+Headless execution is the default operating model. `mouse_click`, `type_text` and
+`screenshot` accept `hwnd` or `window_title`. When
 set, input is delivered to that exact window via Win32 messages **without focusing
 or foregrounding it**, and `screenshot` uses `PrintWindow` so the window is captured
 even if it's behind others, minimized, or on an off-screen desktop.
@@ -359,8 +362,13 @@ screenshot { "window_title": "Notepad" }
 ```
 
 > Caveat: message-based input is ignored by some apps (raw input / DirectInput /
-> physical-key-state checks). For those, use the **AutoHotkey** `ahk_control_send`
-> tool, or bring the window forward briefly.
+> physical-key-state checks). Try **AutoHotkey** `ahk_control_send`; do not silently
+> fall back to foreground input while the user is active.
+
+Foreground mouse, typing, hotkeys, window activation, and interactive desktop
+switches are focus-protected. They return `focus_protected: true` unless the call
+includes `confirm_focus_disruption: true` after the user explicitly requests a
+visible handoff.
 
 ---
 
@@ -406,7 +414,8 @@ off-screen desktop:
 ```jsonc
 show_headless_desktop {
   "name": "work",
-  "instruction": "Sign in to the app, then tell the agent you are done."
+  "instruction": "Sign in to the app, then tell the agent you are done.",
+  "confirm_focus_disruption": true
 }
 ```
 
@@ -422,7 +431,7 @@ For an ordinary hidden window on the normal desktop, use `show_window` /
 `hide_window` instead:
 
 ```jsonc
-show_window { "window_title": "My App" }
+show_window { "window_title": "My App", "confirm_focus_disruption": true }
 ```
 
 ```jsonc
@@ -502,7 +511,7 @@ type_text { "window_title": "Editor", "text": "typed in the background" }
 
 > Caveat: X11 background typing uses `XSendEvent`; most apps accept it, but a few
 > (notably `xterm` with its default `allowSendEvents: false`) ignore synthetic
-> events. For those, focus the window first or use a real X session.
+> events. For those, use Xvfb or report the limitation; do not steal the user's focus.
 
 ### Headless-with-GUI on Linux (Xvfb)
 
@@ -605,18 +614,20 @@ is_admin {}
 
 ---
 
-## Auto-start on boot
+## Console-free startup
 
-Register a logon Scheduled Task (admin + HTTP by default):
+Install the default per-user Startup launcher. It uses `wscript.exe` plus
+`pythonw.exe`, opens no terminal window, binds HTTP only to localhost, and needs no
+UAC prompt:
 
 ```bash
 uv run lowlevel-computer-use-mcp install-startup
 ```
 
-Install without admin privileges:
+An elevated Scheduled Task is an explicit opt-in and may show UAC during setup:
 
 ```bash
-uv run lowlevel-computer-use-mcp install-startup --no-admin
+uv run lowlevel-computer-use-mcp install-startup --admin-task
 ```
 
 Use a custom port:
@@ -644,8 +655,30 @@ server:
 claude mcp add --transport http lowlevel-computer-use-boot http://127.0.0.1:8765/mcp
 ```
 
-The task uses an **interactive logon** trigger (not SYSTEM) so the
-desktop-automation tools keep access to your session.
+The startup process owns no top-level window. Tool-spawned Windows child processes
+also use `CREATE_NO_WINDOW` plus `SW_HIDE`. See
+[runtime safety](docs/features/runtime-safety/console-free-headless.md).
+
+---
+
+## Local regex builder
+
+The bundled Python `re` builder supports guided literals, character classes,
+anchors, groups, alternation and quantifiers, plus raw patterns, flags, sample
+text, syntax feedback, captures, copy/export, and plain-text search mode. It
+evaluates in a console-free subprocess with strict size, time, and match limits.
+
+```powershell
+uv run lowlevel-computer-use-regex-builder --start --literal "ID:" --char-class "0-9" --quantifier "+" --end --sample "ID:42"
+```
+
+```powershell
+uv run lowlevel-computer-use-regex-builder --pattern "^(?P<word>\\w+)$" --flags m --sample "HongKong`nToronto"
+```
+
+Language settings (`en`, `yue`, `bilingual`) and independent English/Cantonese
+funny levels (`1..5`) persist only when explicitly changed. Patterns and samples
+are never persisted or transmitted. See [regex builder documentation](docs/features/developer-tools/regex-builder.md).
 
 ---
 

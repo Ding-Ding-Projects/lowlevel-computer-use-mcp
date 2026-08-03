@@ -5,12 +5,15 @@ returned `ok` and verify with a screenshot.
 
 ---
 
-## 1. Simple foreground automation
+## 1. Explicitly approved foreground handoff
+
+Do not use this while the user is active. Each foreground call requires
+`confirm_focus_disruption: true` after explicit consent.
 
 ```jsonc
 screenshot { "monitor": 1 }                 // see the screen
 mouse_click { "x": 960, "y": 540 }          // click a control
-type_text { "text": "hello world" }         // type into the focused field
+type_text { "text": "hello world", "confirm_focus_disruption": true }
 press_keys { "keys": ["ctrl", "s"] }        // save
 screenshot { "monitor": 1 }                 // verify
 ```
@@ -67,7 +70,7 @@ stop_virtual_display { "display": 99 }
 App on the normal desktop:
 
 ```jsonc
-show_window { "window_title": "My App" }     // let the user sign in
+show_window { "window_title": "My App", "confirm_focus_disruption": true }
 hide_window { "window_title": "My App" }     // then tuck it away
 ```
 
@@ -76,7 +79,8 @@ App on a Windows headless desktop:
 ```jsonc
 show_headless_desktop {
   "name": "work",
-  "instruction": "Sign in, then tell the agent you are done."
+  "instruction": "Sign in, then tell the agent you are done.",
+  "confirm_focus_disruption": true
 }                                             // non-dismissible banner + emergency exit
 hide_headless_desktop { "name": "work" }     // switch back after login
 ```
@@ -142,7 +146,7 @@ run_command_as_admin { "command": "net session" }   // UAC prompt if not elevate
 ## 12. Auto-start the server on boot
 
 ```jsonc
-install_startup {}                            // admin + HTTP on 127.0.0.1:8765
+install_startup {}                            // console-free user startup + localhost HTTP
 startup_status {}
 uninstall_startup {}
 ```
@@ -153,10 +157,10 @@ uninstall_startup {}
 
 | Situation | Use |
 |-----------|-----|
-| App is focused, simple | `mouse_click`/`type_text`/`press_keys` (foreground) |
+| User explicitly hands over focus | Foreground tool with `confirm_focus_disruption:true` |
 | Don't want to steal focus, Windows edit control | `win_set_control_text` (WM_SETTEXT) |
 | Don't want to steal focus, general Windows app | `mouse_click`/`type_text` with `hwnd`; if ignored → `ahk_control_send` |
 | Linux background input | `type_text`/`win_send_keys` with `hwnd` (+`display`) |
-| App ignores synthetic events (xterm, anti-cheat) | focus first (`window_action focus`) or AHK ControlSend |
+| App ignores synthetic events (xterm, anti-cheat) | Try AHK ControlSend or report the limitation; never steal focus |
 | Invisible run | headless desktop (Win) / Xvfb (Linux) |
 | Need Linux on Windows | `wsl_*` tools |

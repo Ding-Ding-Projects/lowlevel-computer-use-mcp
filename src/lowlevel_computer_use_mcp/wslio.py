@@ -69,6 +69,7 @@ def _wsl(args: list[str], timeout: float = 120.0, input_bytes: Optional[bytes] =
         input=input_bytes,
         env=env,
         timeout=timeout,
+        check=False,
     )
     return proc.returncode, _decode(proc.stdout), _decode(proc.stderr)
 
