@@ -11,3 +11,5 @@ main { max-width:1280px; margin:auto; padding:28px 34px 80px; }.page { display:n
 .memory-create { margin:18px 0; }.memory-item { display:flex; align-items:center; justify-content:space-between; gap:18px; }.memory-item .support { display:block; margin-top:4px; }.memory-item .tonal { flex:0 0 auto; }
 .file-transfer-panel { margin-top:18px; }.file-transfer-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }.file-transfer-grid > div { background:var(--surface2); border-radius:14px; padding:14px; }
 @media(max-width:850px) { .file-transfer-grid { grid-template-columns:1fr; } }
+.history-filters { margin:18px 0; }.history-filters .inline-form { align-items:end; }.history-filters .inline-form label { flex:1 1 180px; margin:0; }.history-action-filters { display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:10px; }.history-action-filters .checkbox-label { margin:0; }.filter-error { min-height:1.3em; margin:10px 0 0; color:#ffb4ab; }
+body { overflow-x:hidden; }.history-item pre { max-width:100%; margin-bottom:0; white-space:pre-wrap; overflow-wrap:anywhere; overflow:auto; }

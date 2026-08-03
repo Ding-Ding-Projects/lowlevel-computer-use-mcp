@@ -14,6 +14,8 @@ let notifications = [];
 let desktops = [];
 let changelogEntries = CHANGELOG;
 let memoryEntries = [];
+let historyEntries = [];
+const historyActionSelection = new Set();
 let toolCatalogNames = [];
 let activeTab = 'workspace';
 let appearanceTarget = 'global';
@@ -296,8 +298,52 @@ function ensureAppearanceTranslator() { if ($('colorTranslator')) return; const 
 function renderNotifications() { $('notificationCount').textContent = notifications.length; $('notificationList').innerHTML = notifications.length ? notifications.map((entry) => `<article class="history-item"><strong>${escapeHtml(entry.text)}</strong><br><span class="support">${escapeHtml(entry.at)} · ${escapeHtml(entry.level)}</span></article>`).join('') : '<p class="empty">No notifications yet.</p>'; }
 async function loadNotifications() { notifications = await window.lowlevel.getNotifications(); renderNotifications(); }
 
-function renderHistoryEntry(entry) { return `<article class="history-item"><code>${escapeHtml(entry.tool)}</code> <span class="support">${escapeHtml(entry.at)}</span><pre>${escapeHtml(JSON.stringify(entry.result, null, 2))}</pre></article>`; }
-async function loadHistory() { const query = $('historySearch').value; const matcher = makeMatcher('historySearch', query); const entries = await window.lowlevel.getHistory(); const filtered = entries.filter((entry) => matcher(`${entry.tool} ${JSON.stringify(entry.input)} ${JSON.stringify(entry.result)}`)); $('historyList').innerHTML = filtered.length ? filtered.map(renderHistoryEntry).join('') : '<p class="empty">No matching command history.</p>'; }
+function historyAction(entry) { return entry.action || `run:${entry.tool || 'unknown'}`; }
+function historyActionLabel(action) { return action.startsWith('run:') ? `Ran ${action.slice(4)}` : action; }
+function ensureHistoryFilters() {
+  if ($('historyFilters')) return;
+  const list = $('historyList');
+  if (!list?.parentElement) return;
+  const card = document.createElement('article');
+  card.id = 'historyFilters';
+  card.className = 'history-filters card';
+  card.innerHTML = '<div class="inline-form"><label>Date from<input id="historyDateFrom" type="date" /></label><label>Date to<input id="historyDateTo" type="date" /></label><span id="historyFilterSummary" class="support" aria-live="polite"></span></div><div><strong>Actions from this history</strong><div id="historyActionFilters" class="history-action-filters"></div></div><p id="historyFilterError" class="filter-error" role="alert"></p>';
+  list.parentElement.insertBefore(card, list);
+  $('historyDateFrom').addEventListener('input', renderHistory);
+  $('historyDateTo').addEventListener('input', renderHistory);
+}
+function renderHistoryFilters() {
+  ensureHistoryFilters();
+  const counts = new Map();
+  historyEntries.forEach((entry) => counts.set(historyAction(entry), (counts.get(historyAction(entry)) || 0) + 1));
+  for (const action of [...historyActionSelection]) if (!counts.has(action)) historyActionSelection.delete(action);
+  const host = $('historyActionFilters');
+  if (!host) return;
+  host.innerHTML = counts.size ? [...counts.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([action, count]) => `<label class="checkbox-label"><input type="checkbox" data-history-action="${escapeHtml(action)}" ${historyActionSelection.has(action) ? 'checked' : ''} />${escapeHtml(historyActionLabel(action))} <span class="support">(${count})</span></label>`).join('') : '<span class="support">No actions recorded yet.</span>';
+  host.querySelectorAll('[data-history-action]').forEach((input) => input.addEventListener('change', () => { if (input.checked) historyActionSelection.add(input.dataset.historyAction); else historyActionSelection.delete(input.dataset.historyAction); renderHistory(); }));
+}
+function filteredHistoryEntries() {
+  const query = $('historySearch')?.value || '';
+  const matcher = makeMatcher('historySearch', query);
+  const from = $('historyDateFrom')?.value || '';
+  const to = $('historyDateTo')?.value || '';
+  const invalidRange = Boolean(from && to && from > to);
+  const filtered = invalidRange ? [] : historyEntries.filter((entry) => {
+    const date = String(entry.at || '').slice(0, 10);
+    const action = historyAction(entry);
+    return (!from || date >= from) && (!to || date <= to) && (!historyActionSelection.size || historyActionSelection.has(action)) && matcher(`${action} ${entry.tool} ${JSON.stringify(entry.input)} ${JSON.stringify(entry.result)}`);
+  });
+  return { filtered, invalidRange, from, to };
+}
+function renderHistoryEntry(entry) { return `<article class="history-item"><code>${escapeHtml(entry.tool)}</code> <span class="support">${escapeHtml(historyActionLabel(historyAction(entry)))} · ${escapeHtml(entry.at)}</span><pre>${escapeHtml(JSON.stringify(entry.result, null, 2))}</pre></article>`; }
+function renderHistory() {
+  const result = filteredHistoryEntries();
+  const error = $('historyFilterError');
+  if (error) error.textContent = result.invalidRange ? 'The start date must be on or before the end date.' : '';
+  if ($('historyFilterSummary')) $('historyFilterSummary').textContent = `${result.filtered.length} of ${historyEntries.length} history entries match`;
+  $('historyList').innerHTML = result.filtered.length ? result.filtered.map(renderHistoryEntry).join('') : '<p class="empty">No history entries match the current filters.</p>';
+}
+async function loadHistory() { historyEntries = await window.lowlevel.getHistory(); renderHistoryFilters(); renderHistory(); }
 function renderChangelog() { const query = $('changelogSearch').value; const matcher = makeMatcher('changelogSearch', query); const from = $('changelogDateFrom').value; const to = $('changelogDateTo').value; const entries = changelogEntries.filter((entry) => (!from || entry.date >= from) && (!to || entry.date <= to) && matcher(`${entry.version} ${entry.title} ${entry.changes.join(' ')}`)); $('changelogList').innerHTML = entries.length ? entries.map((entry) => `<article class="history-item"><h3>${escapeHtml(entry.version)} · ${escapeHtml(entry.title)}</h3><p class="support">${escapeHtml(entry.date)} · <a href="${escapeHtml(entry.url)}" target="_blank" rel="noreferrer">${escapeHtml(entry.commit.slice(0, 12))}</a>${entry.codeName ? ` · Build code name: <a href="${escapeHtml(entry.codeNameUrl || '#')}" target="_blank" rel="noreferrer">${escapeHtml(entry.codeName)}</a>` : ''}</p><ul>${entry.changes.map((change) => `<li>${escapeHtml(change)}</li>`).join('')}</ul></article>`).join('') : '<p class="empty">No changelog entries match the current filters.</p>'; }
 async function loadChangelog() { const result = await window.lowlevel.getChangelog(); if (result.ok && result.entries.length) { let identity = {}; try { identity = await window.lowlevel.getReleaseCodename(); } catch { /* static changelog remains useful */ } changelogEntries = result.entries.map((entry, index) => ({ version: entry.commit.slice(0, 12), date: entry.date, title: entry.subject, commit: entry.commit, url: `https://github.com/codingmachineedge/lowlevel-computer-use-mcp/commit/${entry.commit}`, codeName: index === 0 ? identity.codeName : undefined, codeNameUrl: index === 0 ? identity.imageUrl : undefined, changes: entry.body ? entry.body.replace(/\\n/g, '\n').split(/\r?\n/).filter(Boolean).slice(0, 12) : [entry.subject] })); } }
 
@@ -404,8 +450,8 @@ function bindEvents() {
   $('remoteSelect').addEventListener('change', () => { $('targetConnection').value = $('remoteSelect').value; });
   $('runTool').addEventListener('click', async () => { try { await run($('toolName').value, json('toolInput')); } catch (error) { await notify(error.message, '參數 JSON 有問題。', 'error'); } });
   $('installDeps').addEventListener('click', async () => { setStatus(localized('Installing quietly…', '靜靜安裝緊…')); const result = await window.lowlevel.bootstrap(); setStatus(result.ok ? localized('Ready', '準備好喇') : localized('Needs attention', '要睇睇喇')); await notify(result.ok ? 'Dependencies and AutoHotkey are ready.' : `Dependency setup stopped at ${result.stage}.`, result.ok ? '依賴同 AutoHotkey 準備好喇。' : `依賴安裝喺 ${result.stage} 停咗。`, result.ok ? 'info' : 'error'); });
-  $('historySearch').addEventListener('input', loadHistory); $('regexPattern').addEventListener('input', loadHistory); $('regexFlags').addEventListener('input', loadHistory); wireRegexToggle('regexToggle', 'regexPanel'); wireRegexInputs('historySearch', 'regexPattern', 'regexFlags', 'regexResult', loadHistory);
-  $('exportHistory').addEventListener('click', async () => { const entries = await window.lowlevel.getHistory(); const file = await window.lowlevel.exportText(`# Low-Level Computer-Use history\n\n${entries.map((entry) => `## ${entry.tool} — ${entry.at}\n\n\`\`\`json\n${JSON.stringify(entry.result, null, 2)}\n\`\`\``).join('\n\n')}`); await notify(`History exported to ${file}.`, `History export 咗去 ${file}。`); });
+  $('historySearch').addEventListener('input', renderHistory); $('regexPattern').addEventListener('input', renderHistory); $('regexFlags').addEventListener('input', renderHistory); wireRegexToggle('regexToggle', 'regexPanel'); wireRegexInputs('historySearch', 'regexPattern', 'regexFlags', 'regexResult', renderHistory);
+  $('exportHistory').addEventListener('click', async () => { const result = filteredHistoryEntries(); if (result.invalidRange) { await notify('Correct the history date range before exporting.', 'Export 前要先改返 history 日期範圍。', 'error'); return; } const entries = result.filtered; const file = await window.lowlevel.exportText(`# Low-Level Computer-Use history\n\nFiltered entries: ${entries.length} of ${historyEntries.length}\n\n${entries.map((entry) => `## ${entry.tool} — ${entry.at}\n\nAction: ${historyActionLabel(historyAction(entry))}\n\n\`\`\`json\n${JSON.stringify(entry.result, null, 2)}\n\`\`\``).join('\n\n')}`); await notify(`Filtered history exported to ${file}.`, `篩選咗嘅 history export 咗去 ${file}。`); });
   $('clearNotifications').addEventListener('click', () => openConfirmation('Clear notification history', 'This permanently removes the local notification history.', async () => { await window.lowlevel.clearNotifications(); notifications = []; renderNotifications(); await notify('Notification history cleared.', '通知 history 清理好喇。'); }));
   $('notificationOpen').addEventListener('click', () => navigate('notifications')); $('commandPaletteOpen').addEventListener('click', openPalette);
   $('openDocs').addEventListener('click', () => window.lowlevel.openExternal(DOCS_URL));
@@ -433,5 +479,5 @@ window.__captureTab = async (id) => {
 };
 
 function setToolPath(selected) { try { const input = json('toolInput'); input.path = selected; $('toolInput').value = JSON.stringify(input, null, 2); } catch { $('toolInput').value = JSON.stringify({ path: selected }, null, 2); } }
-async function bootstrap() { ensurePathBrowser(); ensureQuickLaunchBrowser(); ensureFileTransferPanel(); ensureSubagentPanel(); ensureTabManagerControls(); ensureAppearanceTranslator(); await ensureReleaseIdentity(); bindEvents(); tabs = normalizeTabs(await window.lowlevel.getTabs()); await loadSettings(); await loadConnections(); await loadAgents(); await loadTools(); await loadNotifications(); await loadChangelog(); await loadMemory(); renderTabs(); renderTabManager(); renderChangelog(); await refreshDesktops(); }
+async function bootstrap() { ensurePathBrowser(); ensureQuickLaunchBrowser(); ensureFileTransferPanel(); ensureHistoryFilters(); ensureSubagentPanel(); ensureTabManagerControls(); ensureAppearanceTranslator(); await ensureReleaseIdentity(); bindEvents(); tabs = normalizeTabs(await window.lowlevel.getTabs()); await loadSettings(); await loadConnections(); await loadAgents(); await loadTools(); await loadNotifications(); await loadChangelog(); await loadMemory(); renderTabs(); renderTabManager(); renderChangelog(); await refreshDesktops(); }
 bootstrap().catch((error) => { setStatus('Needs attention'); show(error.message); });

@@ -11,8 +11,9 @@ project-folder browsers for path fields. Quick launch has its own inline app
 browser beside the command field, so choosing an executable never requires
 leaving the workspace. Its Send and receive files card transfers bounded files
 through the selected computer and uses a native Save dialog for receives.
-History is stored locally under
-Electron's user-data directory and can be exported as Markdown.
+History is stored locally under Electron's user-data directory. The History tab
+combines text/regex search with a date range and action filters derived from the
+actual recorded entries, and exports the currently filtered view as Markdown.
 
 The Workspaces tab can explicitly start/stop the trusted-LAN HTTP API, show its
 `/mcp` and `/health` URLs, and install or remove a hidden Windows logon task for
@@ -65,7 +66,7 @@ behind startup behavior.
 ## Verification
 
 Run `npm run check`, `npm run capture`, and `npm run package` from `electron/`.
-The current local evidence includes 36 Python tests, seven real off-screen
+The current local evidence includes 36 Python tests, eight real off-screen
 renderer captures, the fresh-profile memory Git self-test, a successful
 Squirrel package, and a packaged executable smoke test. A second-computer LAN
 check, full accessibility audit, and simultaneous multi-agent desktop proof

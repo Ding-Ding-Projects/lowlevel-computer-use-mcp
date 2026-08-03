@@ -246,6 +246,7 @@ async function captureScreenshots(outputDir) {
     ['electron-workspaces.png', 'workspace'],
     ['electron-runner.png', 'runner'],
     ['electron-file-transfer.png', 'runner-transfer'],
+    ['electron-history.png', 'history'],
     ['electron-settings.png', 'settings'],
     ['electron-tab-management.png', 'settings-tabs'],
     ['electron-memory.png', 'memory'],

@@ -120,6 +120,8 @@ terminal or visible desktop window was opened while they were produced.
 
 ![Electron file transfer card](docs/screenshots/electron-file-transfer.png)
 
+![Electron History showing date and action filters](docs/screenshots/electron-history.png)
+
 ![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
 
 ![Electron Tab manager showing groups and reviewable bulk close](docs/screenshots/electron-tab-management.png)
