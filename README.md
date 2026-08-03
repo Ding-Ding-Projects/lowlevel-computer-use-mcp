@@ -35,6 +35,7 @@ server also exposes the primitives needed to automate and verify them end to end
 - 🫥 **Headless GUI** — run real GUI apps on an off-screen desktop; show them only when a human login is needed
 - 🎯 **Background / unfocused targeting** — drive a specific window via Win32 messages **without focusing it**
 - 🧩 **Multi-agent desktops** — create and list independent named desktops in one request; namespace them by project and agent
+- 🧑‍🤝‍🧑 **Subagent lanes** — persist project/agent namespaces so later agents can pick up the same quiet room
 - 🚫 **Quiet process policy** — Windows child processes use hidden startup information and CREATE_NO_WINDOW; headless launches never create a terminal or switch the user's input desktop
 - 📸 **Screenshots** — all monitors, one monitor, a region, or **one window via PrintWindow**
 - 🖱️ **Mouse** — move, click, double/right/middle click, drag, scroll, cursor position
@@ -55,6 +56,27 @@ server also exposes the primitives needed to automate and verify them end to end
 > ⚠️ **This server performs real, unsandboxed actions on the host machine** —
 > clicking, typing, killing processes and running shell/elevated commands with your
 > user's privileges. Only register it in environments where that is acceptable.
+
+## Electron manual client
+
+The Electron client is the local GUI for the same MCP surface. It creates
+project/agent headless rooms, hosts the trusted-LAN API, saves named computer
+connections for later agents, runs any tool by name, keeps local history, and
+provides persisted language, funny-level, tab, appearance, notification, and
+changelog controls. The older [GitHub Pages site](https://codingmachineedge.github.io/lowlevel-computer-use-mcp/)
+remains the primary explanatory guide; the detailed feature articles live in
+[`docs/features`](docs/features/README.md).
+
+### Real Electron screenshots
+
+These captures come from the Electron renderer's offscreen capture mode, so no
+terminal or visible desktop window was opened while they were produced.
+
+![Electron Workspaces showing named headless desktop controls](docs/screenshots/electron-workspaces.png)
+
+![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
+
+![Electron Changelog showing date filtering, regex search, and commit evidence](docs/screenshots/electron-changelog.png)
 
 ---
 
