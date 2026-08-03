@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('lowlevel', {
   remoteCall: (baseUrl, tool, input) => ipcRenderer.invoke('remote:call', baseUrl, tool, input),
   getConnections: () => ipcRenderer.invoke('connections:get'),
   setConnections: (connections) => ipcRenderer.invoke('connections:set', connections),
+  getAgents: () => ipcRenderer.invoke('agents:get'),
+  setAgents: (agents) => ipcRenderer.invoke('agents:set', agents),
+  getTools: () => ipcRenderer.invoke('tools:list'),
   startApi: (host, port) => ipcRenderer.invoke('api:start', host, port),
   stopApi: () => ipcRenderer.invoke('api:stop'),
   apiStatus: () => ipcRenderer.invoke('api:status'),
@@ -15,6 +18,13 @@ contextBridge.exposeInMainWorld('lowlevel', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setSettings: (settings) => ipcRenderer.invoke('settings:set', settings),
   getHistory: () => ipcRenderer.invoke('history:get'),
+  getNotifications: () => ipcRenderer.invoke('notifications:get'),
+  addNotification: (notification) => ipcRenderer.invoke('notifications:add', notification),
+  clearNotifications: () => ipcRenderer.invoke('notifications:clear'),
+  getTabs: () => ipcRenderer.invoke('tabs:get'),
+  setTabs: (tabs) => ipcRenderer.invoke('tabs:set', tabs),
   exportText: (text) => ipcRenderer.invoke('export:text', text),
-  openExternal: (url) => ipcRenderer.invoke('open:external', url)
+  openExternal: (url) => ipcRenderer.invoke('open:external', url),
+  browsePath: (kind) => ipcRenderer.invoke('browse:path', kind),
+  getChangelog: () => ipcRenderer.invoke('changelog:get')
 });

@@ -7,4 +7,5 @@ security notes, and verification boundaries.
 - [Quiet processes and automatic hotkeys](quiet-processes.md)
 - [Trusted-LAN MCP API](trusted-lan-api.md)
 - [Electron Material 3 manual client](electron-manual-client.md)
+- [Quick launch and path browsers](quick-launch-browser.md)
 - [Subagent lanes](subagent-lanes.md)

@@ -67,6 +67,13 @@ changelog controls. The older [GitHub Pages site](https://codingmachineedge.gith
 remains the primary explanatory guide; the detailed feature articles live in
 [`docs/features`](docs/features/README.md).
 
+Run the manual client from `electron/` with `npm install` followed by `npm start`.
+Its startup path repairs the Electron runtime when the package is present but
+its binary cache is missing. Quick launch has an inline application browser;
+the Tool runner has file and folder browsers that write safe JSON path values.
+The Windows release target is Squirrel.Windows and the local packaging command
+is `npm run package`.
+
 ### Real Electron screenshots
 
 These captures come from the Electron renderer's offscreen capture mode, so no

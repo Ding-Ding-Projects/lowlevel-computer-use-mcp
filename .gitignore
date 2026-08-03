@@ -19,6 +19,7 @@ captures/
 *.jpg
 *.jpeg
 !docs/**/*.png
+docs/screenshots-packaged/
 
 # OS / editor
 .DS_Store

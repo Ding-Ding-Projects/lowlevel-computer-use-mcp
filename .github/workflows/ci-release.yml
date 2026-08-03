@@ -27,22 +27,54 @@ jobs:
       - name: Run unit suite
         run: uv run python -m unittest discover -s tests -v
 
+  electron:
+    name: Build Electron Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+      - name: Install Electron dependencies
+        run: npm ci --prefix electron
+      - name: Check Electron source
+        run: npm run check --prefix electron
+      - name: Build Squirrel.Windows installer
+        run: npm run package --prefix electron
+      - name: Upload Electron installer bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: herng-ha-windows-${{ github.sha }}
+          path: electron/dist/squirrel-windows/*
+          if-no-files-found: error
+
   release:
     name: Build wheel and publish one release
-    needs: test
+    needs: [test, electron]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - name: Download Electron installer bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: herng-ha-windows-${{ github.sha }}
+          path: herng-ha-artifacts
       - name: Build installable artifacts
         run: uv build
+      - name: Count release lines
+        run: python scripts/count_lines.py --markdown > line-count.md
       - name: Publish uniquely tagged release
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
         run: |
           tag="automation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$tag" dist/* \
+          gh release create "$tag" dist/* herng-ha-artifacts/* \
             --target "$GITHUB_SHA" \
             --title "Automated release ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" \
-            --notes "Tests passed on Windows and Linux for commit ${GITHUB_SHA}."
+            --notes "$(cat line-count.md)\n\nTests passed on Windows and Linux for commit ${GITHUB_SHA}. The Electron Windows Squirrel installer bundle was built by the Windows runner."
