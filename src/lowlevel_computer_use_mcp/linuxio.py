@@ -26,6 +26,8 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
+from .process import popen_hidden, run_hidden
+
 # display num -> {"proc": Popen, "apps": [Popen, ...], "display": ":N"}
 _VIRTUAL_DISPLAYS: dict[int, dict[str, Any]] = {}
 
@@ -40,7 +42,7 @@ def _have(tool: str) -> bool:
 
 def _run(cmd: list[str], env: Optional[dict] = None, timeout: float = 30.0,
          input_text: Optional[str] = None) -> subprocess.CompletedProcess:
-    return subprocess.run(
+    return run_hidden(
         cmd, capture_output=True, text=True, env=env, timeout=timeout, input=input_text
     )
 
@@ -292,7 +294,7 @@ def capture_window(winid: int, client_only: bool = False, env: Optional[dict] = 
     import io
 
     if _have("import"):
-        proc = subprocess.run(
+        proc = run_hidden(
             ["import", "-window", str(winid), "png:-"],
             capture_output=True, env=env, timeout=30,
         )
@@ -322,7 +324,7 @@ def create_virtual_display(num: int = 99, width: int = 1280, height: int = 800,
     _need("Xvfb")
     if num in _VIRTUAL_DISPLAYS and _VIRTUAL_DISPLAYS[num]["proc"].poll() is None:
         return {"display": f":{num}", "already_running": True}
-    proc = subprocess.Popen(
+    proc = popen_hidden(
         ["Xvfb", f":{num}", "-screen", "0", f"{width}x{height}x{depth}", "-nolisten", "tcp"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )
@@ -340,7 +342,7 @@ def launch_on_virtual_display(num: int, command: str) -> dict[str, Any]:
         create_virtual_display(num)
     import shlex
 
-    app = subprocess.Popen(
+    app = popen_hidden(
         shlex.split(command), env=_display_env(num),
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
     )

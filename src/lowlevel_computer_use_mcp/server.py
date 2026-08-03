@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import base64
 import ctypes
 import inspect
 import json
@@ -38,8 +39,11 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, get_type_hints
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
+from .process import run_hidden
 
 # --------------------------------------------------------------------------- #
 # Optional / platform dependencies (imported lazily-safely so the server can
@@ -200,7 +204,7 @@ def _smooth_mouse_move_to(x: int, y: int, *, duration: Optional[float] = None, i
 # Server + constants
 # --------------------------------------------------------------------------- #
 SERVER_INSTRUCTIONS = """\
-LOW-LEVEL COMPUTER-USE SERVER — 53 tools for real, unsandboxed desktop control on
+LOW-LEVEL COMPUTER-USE SERVER — real, unsandboxed desktop control on
 Windows AND Linux. Every tool returns a JSON string: {"ok": true, ...} on success
 or {"ok": false, "error": "..."} on failure — ALWAYS read `ok`. A companion Skill
 named "lowlevel-computer-use" documents every feature in depth (SKILL.md +
@@ -218,7 +222,8 @@ GOLDEN RULES
 FULL TOOL CATALOG (names are the tools)
 - Mouse/keyboard (X-platform): get_screen_size, get_cursor_position, mouse_move,
   mouse_click, mouse_drag, mouse_scroll, type_text, press_keys.
-- Shell: run_command (stdout/stderr/exit code, cwd, timeout).
+- Shell: run_command (stdout/stderr/exit code, cwd, timeout). File transfer:
+  upload_file and download_file (base64, up to 50 MiB per call).
 - Windows (X-platform): list_windows, get_active_window, move_window, resize_window,
   window_action (focus/minimize/maximize/restore/close), show_window, hide_window.
 - Background/unfocused targeting: mouse_click/type_text/screenshot accept hwnd or
@@ -229,7 +234,8 @@ FULL TOOL CATALOG (names are the tools)
   hwnd capture), crop_image.
 - Recording: start_screen_recording, stop_screen_recording, recording_status (mp4).
 - Headless-with-GUI (Windows off-screen desktop): create_headless_desktop,
-  launch_on_headless_desktop, list_headless_windows, close_headless_desktop,
+  create_headless_desktops, list_headless_desktops, launch_on_headless_desktop,
+  list_headless_windows, close_headless_desktop,
   show_headless_desktop / hide_headless_desktop (switch the live screen for a login).
 - Headless-with-GUI (Linux Xvfb): linux_status, create_virtual_display,
   launch_on_virtual_display, list_virtual_display_windows, screenshot_virtual_display,
@@ -275,9 +281,61 @@ SAFETY. run_command, run_command_as_admin, kill_process, run_ahk,
 window_action(close), wsl_destroy, and the launch/startup tools are destructive or
 system-modifying — confirm intent. These tools act directly on the host with the
 user's privileges.
+
+REMOTE HTTP. Streamable HTTP is available at /mcp and /health. HTTP mode prefers
+the LowLevelCURemote headless desktop on Windows and never switches the user's
+input desktop. A trusted-LAN deployment intentionally has no API key because the
+operator consented to LAN trust; any reachable client can still run every tool,
+command, and file transfer with this user's privileges.
 """
 
 mcp = FastMCP("computer_use_mcp", instructions=SERVER_INSTRUCTIONS)
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_request: Request) -> JSONResponse:
+    """Liveness endpoint for a server hosted on a trusted LAN."""
+    return JSONResponse({
+        "ok": True,
+        "service": "lowlevel-computer-use-mcp",
+        "transport": "streamable-http",
+        "headless_preferred": True,
+        "default_desktop": DEFAULT_REMOTE_DESKTOP if IS_WINDOWS else None,
+    })
+
+
+@mcp.custom_route("/api/execute", methods=["POST"])
+async def api_execute(request: Request) -> JSONResponse:
+    """Execute one registered tool for the trusted-LAN manual client.
+
+    The route intentionally delegates to the exact same coroutine and Pydantic
+    model used by MCP, so the GUI cannot quietly grow a second command behavior.
+    """
+    try:
+        payload = await request.json()
+        name = payload.get("tool")
+        func = globals().get(name) if isinstance(name, str) else None
+        if not inspect.iscoroutinefunction(func):
+            return JSONResponse({"ok": False, "error": f"Unknown tool '{name}'."}, status_code=404)
+        arguments = payload.get("arguments", payload.get("params", {}))
+        signature = inspect.signature(func)
+        if "request" in signature.parameters or name in {"health", "api_execute"}:
+            return JSONResponse({"ok": False, "error": f"'{name}' is not an executable tool."}, status_code=404)
+        if "params" in signature.parameters:
+            model_type = get_type_hints(func).get("params")
+            if model_type is None or not hasattr(model_type, "model_validate"):
+                return JSONResponse({"ok": False, "error": f"Tool '{name}' has no request model."}, status_code=400)
+            result = await func(model_type.model_validate(arguments))
+        else:
+            result = await func()
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except json.JSONDecodeError:
+                result = {"ok": True, "result": result}
+        return JSONResponse(result)
+    except Exception as exc:  # the tool's JSON error remains the useful result where available
+        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=400)
 
 CAPTURE_DIR = Path(
     os.environ.get(
@@ -320,6 +378,7 @@ def _require(module: Any, name: str) -> Optional[str]:
 TASK_NAME = "LowLevelComputerUseMCP"
 DEFAULT_HTTP_HOST = os.environ.get("LOWLEVEL_CU_HOST", "127.0.0.1")
 DEFAULT_HTTP_PORT = int(os.environ.get("LOWLEVEL_CU_PORT", "8765"))
+DEFAULT_REMOTE_DESKTOP = "LowLevelCURemote"
 
 
 def _repo_dir() -> Path:
@@ -379,7 +438,7 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
 
     if not require_admin or _is_admin():
         try:
-            proc = subprocess.run(
+            proc = run_hidden(
                 ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", body],
                 capture_output=True,
                 text=True,
@@ -410,7 +469,7 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
             f"@('-NoProfile','-ExecutionPolicy','Bypass','-File','{ps1_path}') "
             "-Verb RunAs -Wait -WindowStyle Hidden -PassThru; exit $p.ExitCode"
         )
-        proc = subprocess.run(
+        proc = run_hidden(
             ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", launcher],
             capture_output=True,
             text=True,
@@ -847,6 +906,21 @@ class HotkeyInput(BaseModel):
         min_length=1,
         max_length=6,
     )
+    hwnd: Optional[int] = Field(
+        default=None,
+        description="BACKGROUND TARGET: native window/control handle; keys are delivered without focus.",
+    )
+    window_title: Optional[str] = Field(
+        default=None,
+        description="BACKGROUND TARGET by title (substring), instead of a handle.",
+    )
+    display: Optional[int] = Field(
+        default=None, description="Linux only: X display number of the target window (e.g. Xvfb 99)"
+    )
+    prefer_ahk: bool = Field(
+        default=True,
+        description="Use AutoHotkey ControlSend when installed, then fall back to Win32 messages.",
+    )
 
 
 @mcp.tool(
@@ -870,9 +944,37 @@ async def press_keys(params: HotkeyInput) -> str:
     Returns:
         str: JSON confirming the keys pressed.
     """
+    keys = [k.lower() for k in params.keys]
+
+    if params.hwnd is not None or params.window_title:
+        if IS_LINUX:
+            if (e := _require(linuxio, "linuxio")):
+                return e
+            try:
+                env = _linux_env(params.display)
+                wid = linuxio.find_window(params.window_title, params.hwnd, env=env)
+                return _ok(mode="background", window_hwnd=wid, **linuxio.send_keys(wid, keys, env=env))
+            except linuxio.LinuxIOError as exc:
+                return _err(str(exc))
+        if (e := _require(winio, "winio (Windows)")):
+            return e
+        try:
+            top = winio.find_top_window(params.window_title, params.hwnd)
+            if params.prefer_ahk and ahk_addon and ahk_addon.find_ahk():
+                try:
+                    ahk_result = ahk_addon.control_send(
+                        ahk_addon.keys_to_text(keys), f"ahk_id {top}", as_keys=True
+                    )
+                    if ahk_result.get("ok"):
+                        return _ok(mode="background-ahk", window_hwnd=top, **ahk_result)
+                except ahk_addon.AhkError:
+                    pass
+            return _ok(mode="background-win32", window_hwnd=top, **winio.send_keys(top, keys))
+        except winio.WinIOError as exc:
+            return _err(str(exc))
+
     if (e := _require(pyautogui, "pyautogui")):
         return e
-    keys = [k.lower() for k in params.keys]
     if len(keys) == 1:
         pyautogui.press(keys[0])
     else:
@@ -923,7 +1025,7 @@ async def run_command(params: RunCommandInput) -> str:
             import shlex
 
             cmd = shlex.split(params.command, posix=(os.name != "nt"))
-        proc = subprocess.run(
+        proc = run_hidden(
             cmd,
             shell=params.shell,
             cwd=params.cwd,
@@ -946,6 +1048,67 @@ async def run_command(params: RunCommandInput) -> str:
         )
     except Exception as exc:  # pragma: no cover
         return _err(f"{type(exc).__name__}: {exc}")
+
+
+MAX_FILE_TRANSFER_BYTES = 50 * 1024 * 1024
+
+
+class UploadFileInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    path: str = Field(..., description="Destination path on the controlled computer", min_length=1)
+    content_base64: str = Field(..., description="UTF-8/base64 file bytes", min_length=1)
+
+
+@mcp.tool(
+    name="upload_file",
+    annotations={
+        "title": "Receive File From Agent",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+async def upload_file(params: UploadFileInput) -> str:
+    """Write a base64 file payload to the controlled computer."""
+    try:
+        raw = base64.b64decode(params.content_base64, validate=True)
+        if len(raw) > MAX_FILE_TRANSFER_BYTES:
+            return _err(f"File exceeds the {MAX_FILE_TRANSFER_BYTES} byte transfer limit.")
+        destination = Path(params.path).expanduser()
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(raw)
+        return _ok(path=str(destination), bytes=len(raw), transferred="agent-to-computer")
+    except (ValueError, OSError) as exc:
+        return _err(f"Could not write file: {exc}")
+
+
+class DownloadFileInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    path: str = Field(..., description="Source path on the controlled computer", min_length=1)
+
+
+@mcp.tool(
+    name="download_file",
+    annotations={
+        "title": "Send File To Agent",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def download_file(params: DownloadFileInput) -> str:
+    """Read a file from the controlled computer as base64, up to 50 MiB."""
+    try:
+        source = Path(params.path).expanduser()
+        size = source.stat().st_size
+        if size > MAX_FILE_TRANSFER_BYTES:
+            return _err(f"File exceeds the {MAX_FILE_TRANSFER_BYTES} byte transfer limit.", bytes=size)
+        raw = source.read_bytes()
+        return _ok(path=str(source), bytes=len(raw), content_base64=base64.b64encode(raw).decode("ascii"), transferred="computer-to-agent")
+    except OSError as exc:
+        return _err(f"Could not read file: {exc}")
 
 
 # =========================================================================== #
@@ -1887,6 +2050,28 @@ class HeadlessDesktopInput(BaseModel):
     )
 
 
+class CreateHeadlessDesktopsInput(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+    names: list[str] = Field(
+        default_factory=list,
+        description="Explicit unique names. If empty, count/prefix generate names.",
+        max_length=32,
+    )
+    count: int = Field(default=1, description="Number to create when names is empty", ge=1, le=32)
+    prefix: str = Field(
+        default="LowLevelCUHeadless",
+        description="Generated name prefix; include project/agent identity for concurrent work.",
+        min_length=1,
+        max_length=48,
+    )
+
+    @model_validator(mode="after")
+    def validate_names(self):
+        if len(set(self.names)) != len(self.names):
+            raise ValueError("Desktop names must be unique within one request.")
+        return self
+
+
 class ShowHeadlessDesktopInput(HeadlessDesktopInput):
     instruction: str = Field(
         default="Complete the requested manual step.",
@@ -1923,6 +2108,52 @@ async def create_headless_desktop(params: HeadlessDesktopInput) -> str:
         return e
     try:
         return _ok(**winio.create_desktop(params.name))
+    except winio.WinIOError as exc:
+        return _err(str(exc))
+
+
+@mcp.tool(
+    name="create_headless_desktops",
+    annotations={
+        "title": "Create Multiple Headless Desktops",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def create_headless_desktops(params: CreateHeadlessDesktopsInput) -> str:
+    """Create several independent off-screen desktops in one request.
+
+    Use a project/agent-specific ``prefix`` or explicit ``names`` when several
+    agents share a Windows session. Existing names are reopened safely.
+    """
+    if (e := _require(winio, "winio (Windows)")):
+        return e
+    try:
+        names = params.names or [f"{params.prefix}-{i}" for i in range(1, params.count + 1)]
+        return _ok(count=len(names), desktops=winio.create_desktops(names))
+    except winio.WinIOError as exc:
+        return _err(str(exc))
+
+
+@mcp.tool(
+    name="list_headless_desktops",
+    annotations={
+        "title": "List Headless Desktops",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": True,
+    },
+)
+async def list_headless_desktops() -> str:
+    """List all headless desktops owned by this server process."""
+    if (e := _require(winio, "winio (Windows)")):
+        return e
+    try:
+        desktops = winio.list_desktops()
+        return _ok(count=len(desktops), desktops=desktops)
     except winio.WinIOError as exc:
         return _err(str(exc))
 
@@ -2979,6 +3210,13 @@ def cheap_entry() -> None:
 # =========================================================================== #
 def _serve(http: bool, host: str, port: int) -> None:
     if http:
+        if IS_WINDOWS and winio is not None:
+            # Remote HTTP mode gets a usable headless workspace immediately.
+            # This only creates a desktop handle; it never switches input or focus.
+            try:
+                winio.create_desktop(DEFAULT_REMOTE_DESKTOP)
+            except winio.WinIOError as exc:
+                print(f"Headless remote desktop unavailable: {exc}", file=sys.stderr)
         mcp.settings.host = host
         mcp.settings.port = port
         mcp.run(transport="streamable-http")
@@ -3044,7 +3282,9 @@ def main() -> None:
         # its parent client instead).
         forwarded = [a for a in sys.argv[1:] if a != "--admin"]
         params = subprocess.list2cmdline(["-m", "lowlevel_computer_use_mcp.server", *forwarded])
-        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 1)
+        # UAC may show the OS consent prompt, but the elevated child itself has
+        # no console window and does not activate a user-facing application.
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, params, None, 0)
         sys.exit(0)
 
     _serve(http=args.http, host=args.host, port=args.port)

@@ -1,0 +1,17 @@
+{
+  "name": "lowlevel-computer-use-manual",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Material 3 manual client for lowlevel-computer-use-mcp",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "allowScripts": {
+    "electron@31.7.7": true
+  }
+}

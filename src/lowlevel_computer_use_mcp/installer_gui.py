@@ -23,6 +23,8 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from .process import run_hidden
+
 SERVER_KEY = "lowlevel-computer-use"
 CODEX_BLOCK_MARKER = f"[mcp_servers.{SERVER_KEY}]"
 
@@ -66,7 +68,7 @@ def ensure_uv(log) -> bool:
 def _run(cmd: list[str], log, cwd: str | None = None) -> int:
     log("$ " + " ".join(cmd))
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, cwd=cwd, timeout=600)
+        proc = run_hidden(cmd, capture_output=True, text=True, cwd=cwd, timeout=600)
         if proc.stdout.strip():
             log(proc.stdout.strip())
         if proc.stderr.strip():
@@ -83,8 +85,8 @@ def action_uv_sync(log) -> None:
     if not ensure_uv(log):
         log("Could not obtain uv automatically. Install it from https://docs.astral.sh/uv/ and retry.\n")
         return
-    _run([uv_path(), "sync"], log, cwd=str(repo_dir()))
-    log("Dependencies installed.\n")
+    rc = _run([uv_path(), "sync"], log, cwd=str(repo_dir()))
+    log("Dependencies installed.\n" if rc == 0 else "Dependency installation failed.\n")
 
 
 def action_register_claude(log) -> None:
@@ -180,13 +182,20 @@ def action_uninstall_startup(log) -> None:
 
 def action_install_ahk(log) -> None:
     log("== Installing AutoHotkey (winget) ==")
+    try:
+        from . import ahk
+        if ahk.find_ahk():
+            log("AutoHotkey is already installed.\n")
+            return
+    except Exception:
+        pass
     winget = shutil.which("winget")
     if not winget:
         log("winget not found. Install AutoHotkey manually from https://www.autohotkey.com\n")
         return
-    _run([winget, "install", "-e", "--id", "AutoHotkey.AutoHotkey", "--accept-source-agreements",
+    rc = _run([winget, "install", "-e", "--id", "AutoHotkey.AutoHotkey", "--accept-source-agreements",
           "--accept-package-agreements"], log)
-    log("Done.\n")
+    log("Done.\n" if rc == 0 else "AutoHotkey installation failed.\n")
 
 
 def action_status(log) -> None:
@@ -275,6 +284,7 @@ def main() -> None:
         def seq(_log):
             _log("===== AUTOMATIC INSTALL =====")
             action_uv_sync(_log)
+            action_install_ahk(_log)
             action_register_claude(_log)
             action_register_codex(_log)
             action_enable_yolo(_log)

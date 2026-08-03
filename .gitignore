@@ -25,3 +25,4 @@ captures/
 Thumbs.db
 .vscode/
 .idea/
+electron/node_modules/

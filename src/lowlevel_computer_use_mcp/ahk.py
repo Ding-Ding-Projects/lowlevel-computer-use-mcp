@@ -19,6 +19,8 @@ import tempfile
 from pathlib import Path
 from typing import Any, Optional
 
+from .process import run_hidden
+
 
 class AhkError(RuntimeError):
     pass
@@ -85,6 +87,22 @@ def status() -> dict[str, Any]:
     return {"installed": True, "path": exe, "version": ahk_version(exe)}
 
 
+def keys_to_text(keys: list[str]) -> str:
+    """Convert common key names to AutoHotkey hotkey syntax."""
+    modifiers = {"ctrl": "^", "control": "^", "alt": "!", "shift": "+", "win": "#"}
+    special = {
+        "enter": "{Enter}", "return": "{Enter}", "tab": "{Tab}",
+        "esc": "{Escape}", "escape": "{Escape}", "space": "{Space}",
+        "backspace": "{Backspace}", "delete": "{Delete}", "del": "{Delete}",
+        "up": "{Up}", "down": "{Down}", "left": "{Left}", "right": "{Right}",
+    }
+    if not keys:
+        raise AhkError("At least one key is required.")
+    return "".join(modifiers.get(key.lower(), "") for key in keys) + "".join(
+        special.get(key.lower(), key) for key in keys if key.lower() not in modifiers
+    )
+
+
 def run_script(code: str, args: Optional[list[str]] = None, timeout: float = 60.0,
                exe_path: Optional[str] = None) -> dict[str, Any]:
     """Write `code` to a temp .ahk file and run it, capturing stdout/stderr.
@@ -103,7 +121,7 @@ def run_script(code: str, args: Optional[list[str]] = None, timeout: float = 60.
         # UTF-8 with BOM so AutoHotkey reads unicode correctly.
         Path(path).write_text(code, encoding="utf-8-sig")
         cmd = [exe, "/ErrorStdOut", path, *(args or [])]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        proc = run_hidden(cmd, capture_output=True, text=True, timeout=timeout)
         return {
             "ok": proc.returncode == 0,
             "returncode": proc.returncode,

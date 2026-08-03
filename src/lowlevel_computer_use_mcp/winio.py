@@ -67,7 +67,10 @@ PW_RENDERFULLCONTENT = 0x00000002
 GENERIC_ALL = 0x10000000
 DESKTOP_CREATEWINDOW = 0x0002
 STARTF_USESHOWWINDOW = 0x00000001
-CREATE_NEW_CONSOLE = 0x00000010
+# A headless GUI process must not inherit or create a console.  CREATE_NO_WINDOW
+# is ignored for GUI-subsystem apps, but suppresses a console for command-line
+# programs launched on the hidden desktop too.
+CREATE_NO_WINDOW = 0x08000000
 SW_SHOWNORMAL = 1
 
 
@@ -587,11 +590,59 @@ _DESKTOPS: dict[str, int] = {}
 
 
 def create_desktop(name: str) -> dict[str, Any]:
-    """Create (or reopen) an off-screen desktop in the current window station."""
+    """Create or reopen an off-screen desktop in the current window station."""
+    existing = _DESKTOPS.get(name)
+    if existing:
+        return {
+            "name": name,
+            "handle": existing,
+            "full": f"WinSta0\\{name}",
+            "already_exists": True,
+        }
+
+    # Make repeated calls idempotent even after a server restart or a prior
+    # caller opened the named desktop in this window station.
+    reopened = user32.OpenDesktopW(name, 0, False, GENERIC_ALL)
+    if reopened:
+        _DESKTOPS[name] = int(reopened)
+        return {
+            "name": name,
+            "handle": int(reopened),
+            "full": f"WinSta0\\{name}",
+            "already_exists": True,
+        }
+
     hdesk = user32.CreateDesktopW(name, None, None, 0, GENERIC_ALL, None)
     _check(hdesk, f"CreateDesktopW('{name}')")
     _DESKTOPS[name] = int(hdesk)
-    return {"name": name, "handle": int(hdesk), "full": f"WinSta0\\{name}"}
+    return {
+        "name": name,
+        "handle": int(hdesk),
+        "full": f"WinSta0\\{name}",
+        "already_exists": False,
+    }
+
+
+def create_desktops(names: list[str]) -> list[dict[str, Any]]:
+    """Create or reopen several independent headless desktops."""
+    if not names:
+        raise WinIOError("Provide at least one desktop name.")
+    if len(set(names)) != len(names):
+        raise WinIOError("Desktop names must be unique within one request.")
+    return [create_desktop(name) for name in names]
+
+
+def list_desktops() -> list[dict[str, Any]]:
+    """List the headless desktops currently owned by this server process."""
+    return [
+        {
+            "name": name,
+            "handle": handle,
+            "full": f"WinSta0\\{name}",
+            "window_count": len(list_desktop_windows(name)),
+        }
+        for name, handle in list(_DESKTOPS.items())
+    ]
 
 
 def launch_on_desktop(name: str, command_line: str) -> dict[str, Any]:
@@ -606,13 +657,19 @@ def launch_on_desktop(name: str, command_line: str) -> dict[str, Any]:
     pi = PROCESS_INFORMATION()
     cmd_buf = ctypes.create_unicode_buffer(command_line)
     ok = kernel32.CreateProcessW(
-        None, cmd_buf, None, None, False, CREATE_NEW_CONSOLE, None, None,
+        None, cmd_buf, None, None, False, CREATE_NO_WINDOW, None, None,
         ctypes.byref(si), ctypes.byref(pi),
     )
     _check(ok, f"CreateProcessW('{command_line}')")
     kernel32.CloseHandle(pi.hThread)
     kernel32.CloseHandle(pi.hProcess)
-    return {"desktop": name, "pid": int(pi.dwProcessId), "command": command_line}
+    return {
+        "desktop": name,
+        "pid": int(pi.dwProcessId),
+        "command": command_line,
+        "terminal_window": False,
+        "focus_stealing": False,
+    }
 
 
 def list_desktop_windows(name: str) -> list[dict[str, Any]]:
@@ -658,6 +715,9 @@ def close_desktop(name: str) -> dict[str, Any]:
     if hdesk is None:
         return {"name": name, "closed": False, "note": "not tracked"}
     user32.CloseDesktop(hdesk)
+    cached = _XDESK_CACHE.pop(name, None)
+    if cached:
+        user32.CloseDesktop(cached)
     return {"name": name, "closed": True}
 
 

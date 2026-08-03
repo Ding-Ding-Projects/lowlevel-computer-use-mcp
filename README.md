@@ -34,6 +34,8 @@ server also exposes the primitives needed to automate and verify them end to end
 
 - 🫥 **Headless GUI** — run real GUI apps on an off-screen desktop; show them only when a human login is needed
 - 🎯 **Background / unfocused targeting** — drive a specific window via Win32 messages **without focusing it**
+- 🧩 **Multi-agent desktops** — create and list independent named desktops in one request; namespace them by project and agent
+- 🚫 **Quiet process policy** — Windows child processes use hidden startup information and CREATE_NO_WINDOW; headless launches never create a terminal or switch the user's input desktop
 - 📸 **Screenshots** — all monitors, one monitor, a region, or **one window via PrintWindow**
 - 🖱️ **Mouse** — move, click, double/right/middle click, drag, scroll, cursor position
 - ⌨️ **Keyboard** — type text, press hotkey combinations (Ctrl+C, Alt+Tab, …)
@@ -82,6 +84,8 @@ server also exposes the primitives needed to automate and verify them end to end
 | `crop_image` | Crop an existing image to a box |
 | `start_screen_recording` / `stop_screen_recording` / `recording_status` | mp4 recording |
 | `create_headless_desktop` | Create an off-screen desktop |
+| `create_headless_desktops` | Create multiple independent desktops with explicit names or a generated project/agent prefix |
+| `list_headless_desktops` | List desktops owned by this server process and their window counts |
 | `launch_on_headless_desktop` | Launch a GUI app onto it |
 | `list_headless_windows` | List windows on the off-screen desktop |
 | `show_headless_desktop` / `hide_headless_desktop` | Temporarily make it interactive (login), then hide |
@@ -154,6 +158,33 @@ Then run it:
 ```bash
 lowlevel-computer-use-mcp
 ```
+
+## Remote LAN API
+
+The server already exposes MCP over Streamable HTTP. On the computer being
+controlled, bind it to the LAN interface:
+
+```bash
+uv run lowlevel-computer-use-mcp --http --host 0.0.0.0 --port 8765
+```
+
+Agents on the trusted LAN connect to `http://<computer-ip>:8765/mcp`; health
+checks use `http://<computer-ip>:8765/health`. This mode intentionally has no
+API key because it is designed for a trusted home/LAN network. Anyone who can
+reach the port can control the computer with the server's user privileges, so
+use Windows Firewall or a private VLAN and never forward port `8765` to the
+public internet.
+
+The Electron client can save a named connection and route manual tool calls to
+`POST http://<computer-ip>:8765/api/execute` with a JSON body such as:
+
+```json
+{"tool":"list_headless_desktops","arguments":{}}
+```
+
+The Electron manual client uses the same local cheap-tool API and starts child
+processes with hidden Windows startup flags, so dependency installation and
+manual tool calls do not open terminal windows.
 
 Captures (screenshots, recordings) are written to
 `~/lowlevel-computer-use-captures` by default. Override with the
