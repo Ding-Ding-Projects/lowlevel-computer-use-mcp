@@ -16,6 +16,8 @@
   optional regex, and public catalog-backed release code names.
 - Named local memory checkpoints for settings, connections, agent lanes, and tab
   layout, with Git-backed restore revisions.
+- Per-target appearance editing with typography spacing, color translation,
+  built-in presets, user presets, reset, export, and renderer self-tests.
 
 ## Evidence still required
 

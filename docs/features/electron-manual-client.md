@@ -27,7 +27,10 @@ search as the default and exposes an opt-in bounded JavaScript regex builder
 with pattern, flags, sample, and validation feedback. The appearance editor
   includes a continuous color field, editable HEX/HEX8/RGB/RGBA/alpha/HSL/HSV/
   HWB/CIELab/LCH/OKLab/OKLCH/CMYK/CSS-name representations, contrast and gamut
-  readouts, and copy actions. Conversion is local and preserves alpha.
+  readouts, and copy actions. Conversion is local and preserves alpha. Right-
+  click or the keyboard context-menu path opens a per-target editor for
+  typography, spacing, colors, and resettable overrides; built-in and named
+  user presets are persisted and exported.
 
 The Changelog tab reads the complete local Git history, links every entry to its
 exact commit, filters by date and text, and exports the filtered view. The

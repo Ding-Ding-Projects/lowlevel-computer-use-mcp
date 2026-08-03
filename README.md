@@ -104,6 +104,9 @@ The Memory page saves settings, connections, subagent lanes, and tab layout as
 named local checkpoints; restores create new Git-backed revisions in app data.
 The Tool runner also sends and receives bounded files through the selected local
 or saved LAN computer, using a user-controlled native Save dialog for receives.
+The Settings appearance editor also supports per-target typography, spacing,
+translated colors, built-in presets, and saved user presets with reset and
+export/import.
 Each build also carries a factual public dim-sum code name and catalog-photo link
 in the Manual and Changelog surfaces; the photo is referenced, never copied.
 The Windows release target is Squirrel.Windows and the local packaging command

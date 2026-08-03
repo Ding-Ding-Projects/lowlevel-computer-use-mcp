@@ -64,9 +64,10 @@ async function runAppearanceSelfTest() {
   const win = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false } });
   await win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   await new Promise((resolve) => setTimeout(resolve, 1200));
-  const result = await win.webContents.executeJavaScript('window.__appearanceColorSelfTest()');
+  const color = await win.webContents.executeJavaScript('window.__appearanceColorSelfTest()');
+  const target = await win.webContents.executeJavaScript('window.__appearanceTargetSelfTest()');
   win.destroy();
-  return result;
+  return { ok: color.ok && target.ok, color, target };
 }
 
 function commandSpec() {

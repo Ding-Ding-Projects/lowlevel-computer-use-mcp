@@ -13,7 +13,7 @@ native inline Quick launch app browser with a visible Browse button, a complete 
 tab-search regex state, a full-history changelog, persistent tab groups with
 reviewable bulk-close actions, a public catalog-backed release code name, and
 quiet runtime repair for the Electron binary cache. This pass adds a persisted
-Memory page with Git-backed local revisions and append-only restores, plus a Tool runner file-transfer card with bounded send/receive and user-controlled saves. The next verification pass
+Memory page with Git-backed local revisions and append-only restores, a Tool runner file-transfer card with bounded send/receive and user-controlled saves, and a per-target appearance editor with typography controls and presets. The next verification pass
 should run the Windows-only headless desktop tests and a second-computer LAN
 check. Static Python compilation and model tests do not prove those runtime
 boundaries.
