@@ -71,6 +71,10 @@ Run the manual client from `electron/` with `npm install` followed by `npm start
 Its startup path repairs the Electron runtime when the package is present but
 its binary cache is missing. Quick launch has an inline application browser;
 the Tool runner has file and folder browsers that write safe JSON path values.
+The Tab manager supports named groups, persistent collapse state, searchable
+context menus, and reviewable bulk close by visible tab text with optional regex.
+Each build also carries a factual public dim-sum code name and catalog-photo link
+in the Manual and Changelog surfaces; the photo is referenced, never copied.
 The Windows release target is Squirrel.Windows and the local packaging command
 is `npm run package`.
 
@@ -82,6 +86,8 @@ terminal or visible desktop window was opened while they were produced.
 ![Electron Workspaces showing named headless desktop controls](docs/screenshots/electron-workspaces.png)
 
 ![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
+
+![Electron Tab manager showing groups and reviewable bulk close](docs/screenshots/electron-tab-management.png)
 
 ![Electron Changelog showing date filtering, regex search, and commit evidence](docs/screenshots/electron-changelog.png)
 

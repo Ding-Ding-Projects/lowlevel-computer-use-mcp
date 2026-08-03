@@ -26,5 +26,6 @@ contextBridge.exposeInMainWorld('lowlevel', {
   exportText: (text) => ipcRenderer.invoke('export:text', text),
   openExternal: (url) => ipcRenderer.invoke('open:external', url),
   browsePath: (kind) => ipcRenderer.invoke('browse:path', kind),
-  getChangelog: () => ipcRenderer.invoke('changelog:get')
+  getChangelog: () => ipcRenderer.invoke('changelog:get'),
+  getReleaseCodename: () => ipcRenderer.invoke('release:codename')
 });

@@ -8,4 +8,5 @@ security notes, and verification boundaries.
 - [Trusted-LAN MCP API](trusted-lan-api.md)
 - [Electron Material 3 manual client](electron-manual-client.md)
 - [Quick launch and path browsers](quick-launch-browser.md)
+- [Tab groups and bulk close](tab-management.md)
 - [Subagent lanes](subagent-lanes.md)

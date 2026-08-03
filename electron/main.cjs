@@ -204,6 +204,7 @@ async function captureScreenshots(outputDir) {
   const captures = [
     ['electron-workspaces.png', 'workspace'],
     ['electron-settings.png', 'settings'],
+    ['electron-tab-management.png', 'settings-tabs'],
     ['electron-changelog.png', 'changelog']
   ];
   for (const [filename, tab] of captures) {
@@ -226,6 +227,7 @@ app.whenReady().then(() => {
   ipcMain.handle('agents:set', (_event, agents) => { writeJson('agents.json', agents); return agents; });
   ipcMain.handle('tools:list', () => getToolCatalog());
   ipcMain.handle('changelog:get', () => getChangelog());
+  ipcMain.handle('release:codename', () => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'release-codename.json'), 'utf8')); } catch { return { codeName: 'Unassigned build' }; } });
   ipcMain.handle('api:start', (_event, host, port) => startApi(host, port));
   ipcMain.handle('api:stop', () => stopApi());
   ipcMain.handle('api:status', () => ({ running: Boolean(apiProcess && apiProcess.exitCode === null) }));

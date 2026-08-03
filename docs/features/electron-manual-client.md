@@ -31,6 +31,22 @@ exact commit, filters by date and text, and exports the filtered view. The
 packaged Windows build uses the Squirrel target and is smoke-tested through the
 same off-screen capture path as development runs.
 
+The Manual surface also shows the build's factual dim-sum code name and a link
+to the verified public catalog photo. The release workflow selects the next
+unused dish from `Ding-Ding-Projects/dim-sum-photos` and injects the same
+metadata into the packaged client and release notes; it never copies the photo
+into this repository.
+
+Tab management is first-class rather than decorative. The Settings tab exposes
+independent current-strip, group-tab, group-name, and master-tab searches; each
+keeps its own regex state. Users can create, rename, collapse, and expand groups,
+move tabs between groups, pin tabs, reorder them, and open a searchable tab
+context menu. The bulk-close controls match only visible tab labels, default to
+plain text, optionally use the anchored regex builder, preview the exact count
+and labels, exclude pinned tabs by default, and require the app's two-key plus
+slider confirmation before closing. The active tab is protected if a request
+would otherwise close every page.
+
 ## Configuration
 
 ```powershell
@@ -57,4 +73,5 @@ simultaneous multi-agent desktop proof remain host-specific follow-up evidence.
 - [Headless desktops](headless-desktops.md)
 - [Trusted-LAN API](trusted-lan-api.md)
 - [Subagent lanes](subagent-lanes.md)
+- [Tab groups and bulk close](tab-management.md)
 - [Quiet processes](quiet-processes.md)
