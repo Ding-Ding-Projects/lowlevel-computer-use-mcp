@@ -60,6 +60,14 @@ async function runMemorySelfTest() {
   const second = await recordLocalVersion({ ...state, selfTest: new Date().toISOString() }, 'Memory self-test restore');
   return { ok: first.ok && second.ok, firstRevision: first.revision || null, secondRevision: second.revision || null, error: first.error || second.error || null };
 }
+async function runAppearanceSelfTest() {
+  const win = new BrowserWindow({ show: false, webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false } });
+  await win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  await new Promise((resolve) => setTimeout(resolve, 1200));
+  const result = await win.webContents.executeJavaScript('window.__appearanceColorSelfTest()');
+  win.destroy();
+  return result;
+}
 
 function commandSpec() {
   if (process.platform === 'win32') return { file: 'uv.exe', prefix: ['run', '--directory', repoDir, 'lowlevel-computer-use-cheap'] };
@@ -248,14 +256,18 @@ async function captureScreenshots(outputDir) {
     ['electron-file-transfer.png', 'runner-transfer'],
     ['electron-history.png', 'history'],
     ['electron-settings.png', 'settings'],
+    ['electron-appearance.png', 'settings-appearance'],
     ['electron-tab-management.png', 'settings-tabs'],
     ['electron-memory.png', 'memory'],
     ['electron-changelog.png', 'changelog']
   ];
   for (const [filename, tab] of captures) {
-    const captureTab = tab === 'runner-transfer' ? 'runner' : tab;
+    if (tab === 'settings-appearance') win.setSize(1440, 1200);
+    else if (tab === 'settings-tabs') win.setSize(1440, 1000);
+    const captureTab = tab === 'runner-transfer' || tab === 'settings-appearance' ? tab.replace('-transfer', '').replace('-appearance', '') : tab;
     await win.webContents.executeJavaScript(`window.__captureTab(${JSON.stringify(captureTab)})`);
     if (tab === 'runner-transfer') await win.webContents.executeJavaScript("document.getElementById('fileTransferPanel')?.scrollIntoView({ block: 'start' });");
+    if (tab === 'settings-appearance') await win.webContents.executeJavaScript("document.getElementById('colorTranslator')?.scrollIntoView({ block: 'start' });");
     await new Promise((resolve) => setTimeout(resolve, 250));
     const image = await win.webContents.capturePage();
     fs.writeFileSync(path.join(outputDir, filename), image.toPNG());
@@ -352,6 +364,7 @@ app.whenReady().then(() => {
   });
   const captureArgument = process.argv.find((argument) => argument.startsWith('--capture-dir='));
   if (process.argv.includes('--memory-self-test')) runMemorySelfTest().then((result) => { process.stdout.write(JSON.stringify(result) + '\n'); app.quit(); });
+  else if (process.argv.includes('--appearance-self-test')) runAppearanceSelfTest().then((result) => { process.stdout.write(JSON.stringify(result) + '\n'); app.quit(); });
   else if (captureArgument) captureScreenshots(path.resolve(captureArgument.slice('--capture-dir='.length)));
   else createWindow();
   if (process.platform === 'win32') bootstrap();

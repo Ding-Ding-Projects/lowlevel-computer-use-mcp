@@ -25,9 +25,9 @@ theme, density, accent, font scale, appearance values, tab state, connections,
 agents, notifications, and history. Every searchable surface keeps plain-text
 search as the default and exposes an opt-in bounded JavaScript regex builder
 with pattern, flags, sample, and validation feedback. The appearance editor
-includes a continuous native color field, editable HEX/RGB/HSL/HSV/HWB/CMYK
-representations, contrast readout, copy actions, and an honest capability note
-for Lab-family spaces that this renderer does not yet convert.
+  includes a continuous color field, editable HEX/HEX8/RGB/RGBA/alpha/HSL/HSV/
+  HWB/CIELab/LCH/OKLab/OKLCH/CMYK/CSS-name representations, contrast and gamut
+  readouts, and copy actions. Conversion is local and preserves alpha.
 
 The Changelog tab reads the complete local Git history, links every entry to its
 exact commit, filters by date and text, and exports the filtered view. The
@@ -66,7 +66,7 @@ behind startup behavior.
 ## Verification
 
 Run `npm run check`, `npm run capture`, and `npm run package` from `electron/`.
-The current local evidence includes 36 Python tests, eight real off-screen
+The current local evidence includes 36 Python tests, nine real off-screen
 renderer captures, the fresh-profile memory Git self-test, a successful
 Squirrel package, and a packaged executable smoke test. A second-computer LAN
 check, full accessibility audit, and simultaneous multi-agent desktop proof

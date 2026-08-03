@@ -44,7 +44,7 @@ Verification so far:
 - GitHub Project access is externally blocked because the configured owner token
   lacks `read:project`/`project`; no focus-stealing browser authorization was opened.
 - Electron `npm run check` passed the Node syntax and renderer contract checks;
-  `npm run capture` produced eight real off-screen screenshots, including the
+  `npm run capture` produced nine real off-screen screenshots, including the
   tab-group, bulk-close, and memory-checkpoint surfaces; the fresh-profile
   memory self-test created two distinct local Git revisions; `npm run package`
   produced the Squirrel.Windows installer; and the packaged executable exited

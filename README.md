@@ -124,6 +124,8 @@ terminal or visible desktop window was opened while they were produced.
 
 ![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
 
+![Electron appearance translator showing color-space conversion](docs/screenshots/electron-appearance.png)
+
 ![Electron Tab manager showing groups and reviewable bulk close](docs/screenshots/electron-tab-management.png)
 
 ![Electron Memory page showing local checkpoint controls](docs/screenshots/electron-memory.png)
