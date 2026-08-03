@@ -9,6 +9,7 @@
 - Electron Material 3 manual client foundation with tabs, local history, settings,
   export, regex search, and headless workspace controls.
 - Inline Quick launch app browsing plus Tool runner file/folder path browsing.
+- Labeled Quick launch Browse control plus bounded Electron file send/receive with native save selection.
 - Complete local Git-history changelog, independent tab regex state, notification
   history, command palette tool catalog, and Squirrel.Windows packaging.
 - Persistent tab groups, searchable tab context menus, reviewable bulk close with

@@ -241,15 +241,20 @@ async function captureScreenshots(outputDir) {
   });
   await win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
   await new Promise((resolve) => setTimeout(resolve, 1800));
+  await win.webContents.executeJavaScript("document.getElementById('toolOutput').textContent = 'Ready for a tool call.';");
   const captures = [
     ['electron-workspaces.png', 'workspace'],
+    ['electron-runner.png', 'runner'],
+    ['electron-file-transfer.png', 'runner-transfer'],
     ['electron-settings.png', 'settings'],
     ['electron-tab-management.png', 'settings-tabs'],
     ['electron-memory.png', 'memory'],
     ['electron-changelog.png', 'changelog']
   ];
   for (const [filename, tab] of captures) {
-    await win.webContents.executeJavaScript(`window.__captureTab(${JSON.stringify(tab)})`);
+    const captureTab = tab === 'runner-transfer' ? 'runner' : tab;
+    await win.webContents.executeJavaScript(`window.__captureTab(${JSON.stringify(captureTab)})`);
+    if (tab === 'runner-transfer') await win.webContents.executeJavaScript("document.getElementById('fileTransferPanel')?.scrollIntoView({ block: 'start' });");
     await new Promise((resolve) => setTimeout(resolve, 250));
     const image = await win.webContents.capturePage();
     fs.writeFileSync(path.join(outputDir, filename), image.toPNG());
@@ -320,6 +325,17 @@ app.whenReady().then(() => {
     const file = path.join(app.getPath('downloads'), `lowlevel-manual-${Date.now()}.md`);
     fs.writeFileSync(file, text, 'utf8');
     return file;
+  });
+  ipcMain.handle('file:save', async (event, suggestedName, contentBase64) => {
+    const encoded = String(contentBase64 || '');
+    if (!encoded || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded) || encoded.length > Math.ceil((50 * 1024 * 1024) * 4 / 3) + 4) throw new Error('File payload is empty, invalid, or exceeds the 50 MiB transfer limit.');
+    const bytes = Buffer.from(encoded, 'base64');
+    if (!bytes.length || bytes.length > 50 * 1024 * 1024) throw new Error('File exceeds the 50 MiB transfer limit.');
+    const owner = BrowserWindow.fromWebContents(event.sender);
+    const result = await dialog.showSaveDialog(owner, { defaultPath: path.basename(String(suggestedName || 'download.bin')), title: 'Save received file' });
+    if (result.canceled || !result.filePath) return null;
+    fs.writeFileSync(result.filePath, bytes);
+    return result.filePath;
   });
   ipcMain.handle('open:external', (_event, url) => {
     const parsed = new URL(url);

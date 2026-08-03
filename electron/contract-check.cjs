@@ -22,6 +22,7 @@ assert.match(launcher, /install/);
 assert.match(launcher, /install\.js/);
 assert.match(renderer, /ensureQuickLaunchBrowser/);
 assert.match(renderer, /browseQuickLaunchApp/);
+assert.match(renderer, /button.textContent = 'Browse'/);
 assert.match(renderer, /openTabRegex/);
 assert.match(renderer, /updateTabRegex/);
 assert.match(renderer, /applyTabBulk/);
@@ -32,16 +33,19 @@ assert.match(renderer, /createTabGroup/);
 assert.match(renderer, /ensureReleaseIdentity/);
 assert.match(renderer, /createMemoryCheckpoint/);
 assert.match(renderer, /restoreMemoryCheckpoint/);
+assert.match(renderer, /sendSelectedFile/);
+assert.match(renderer, /receiveSelectedFile/);
 assert.match(main, /local-versions/);
+assert.match(main, /file:save/);
 assert.match(main, /memory:create/);
 assert.match(main, /memory:restore/);
 assert.match(main, /memory-self-test/);
 assert.ok(codename.codeName && codename.imageUrl, 'missing release code-name metadata');
 for (const id of ['tabAdvancedControls', 'tabBulkScope', 'tabBulkMode', 'tabBulkRegexPanel', 'tabContextMenu']) assert.match(renderer, new RegExp(id));
 assert.match(renderer, /toolCatalogNames/);
-for (const id of ['launchCommand', 'tabRegexPanel', 'commandPalette', 'confirmDialog', 'memory', 'memoryList', 'memoryLabel']) assert.match(html, new RegExp(`id="${id}"`));
+for (const id of ['launchCommand', 'tabRegexPanel', 'commandPalette', 'confirmDialog', 'memory', 'memoryList', 'memoryLabel', 'fileTransferPanel']) assert.match(renderer + html, new RegExp(id));
 assert.equal(packageJson.build.win.target[0].target, 'squirrel');
-for (const screenshot of ['electron-workspaces.png', 'electron-settings.png', 'electron-tab-management.png', 'electron-memory.png', 'electron-changelog.png']) {
+for (const screenshot of ['electron-workspaces.png', 'electron-runner.png', 'electron-file-transfer.png', 'electron-settings.png', 'electron-tab-management.png', 'electron-memory.png', 'electron-changelog.png']) {
   const screenshotPath = path.join(root, '..', 'docs', 'screenshots', screenshot);
   assert.ok(fs.existsSync(screenshotPath) && fs.statSync(screenshotPath).size > 1000, `missing screenshot: ${screenshot}`);
 }

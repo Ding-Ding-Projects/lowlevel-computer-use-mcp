@@ -102,6 +102,8 @@ The Tab manager supports named groups, persistent collapse state, searchable
 context menus, and reviewable bulk close by visible tab text with optional regex.
 The Memory page saves settings, connections, subagent lanes, and tab layout as
 named local checkpoints; restores create new Git-backed revisions in app data.
+The Tool runner also sends and receives bounded files through the selected local
+or saved LAN computer, using a user-controlled native Save dialog for receives.
 Each build also carries a factual public dim-sum code name and catalog-photo link
 in the Manual and Changelog surfaces; the photo is referenced, never copied.
 The Windows release target is Squirrel.Windows and the local packaging command
@@ -113,6 +115,10 @@ These captures come from the Electron renderer's offscreen capture mode, so no
 terminal or visible desktop window was opened while they were produced.
 
 ![Electron Workspaces showing named headless desktop controls](docs/screenshots/electron-workspaces.png)
+
+![Electron Tool runner showing file transfer and path controls](docs/screenshots/electron-runner.png)
+
+![Electron file transfer card](docs/screenshots/electron-file-transfer.png)
 
 ![Electron Settings showing language, funny-level, and appearance controls](docs/screenshots/electron-settings.png)
 

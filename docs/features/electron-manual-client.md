@@ -9,7 +9,9 @@ GUI apps. Tool runner invokes the same Cheap Version functions as the MCP
 server, accepts saved LAN connections, and offers native app, file, folder, and
 project-folder browsers for path fields. Quick launch has its own inline app
 browser beside the command field, so choosing an executable never requires
-leaving the workspace. History is stored locally under
+leaving the workspace. Its Send and receive files card transfers bounded files
+through the selected computer and uses a native Save dialog for receives.
+History is stored locally under
 Electron's user-data directory and can be exported as Markdown.
 
 The Workspaces tab can explicitly start/stop the trusted-LAN HTTP API, show its
@@ -63,7 +65,7 @@ behind startup behavior.
 ## Verification
 
 Run `npm run check`, `npm run capture`, and `npm run package` from `electron/`.
-The current local evidence includes 36 Python tests, five real off-screen
+The current local evidence includes 36 Python tests, seven real off-screen
 renderer captures, the fresh-profile memory Git self-test, a successful
 Squirrel package, and a packaged executable smoke test. A second-computer LAN
 check, full accessibility audit, and simultaneous multi-agent desktop proof
@@ -83,4 +85,5 @@ in its metadata.
 - [Subagent lanes](subagent-lanes.md)
 - [Tab groups and bulk close](tab-management.md)
 - [Memory checkpoints and local revisions](memory-checkpoints.md)
+- [Electron file transfer](file-transfer.md)
 - [Quiet processes](quiet-processes.md)

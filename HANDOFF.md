@@ -9,11 +9,11 @@ one of those saved connections.
 
 The untracked `Tools/Windows 11.iso` file was pre-existing user data and was
 preserved without inspection or staging. The current Electron pass also adds a
-native inline Quick launch app browser, a complete tool catalog, independent
+native inline Quick launch app browser with a visible Browse button, a complete tool catalog, independent
 tab-search regex state, a full-history changelog, persistent tab groups with
 reviewable bulk-close actions, a public catalog-backed release code name, and
 quiet runtime repair for the Electron binary cache. This pass adds a persisted
-Memory page with Git-backed local revisions and append-only restores. The next verification pass
+Memory page with Git-backed local revisions and append-only restores, plus a Tool runner file-transfer card with bounded send/receive and user-controlled saves. The next verification pass
 should run the Windows-only headless desktop tests and a second-computer LAN
 check. Static Python compilation and model tests do not prove those runtime
 boundaries.
@@ -44,7 +44,7 @@ Verification so far:
 - GitHub Project access is externally blocked because the configured owner token
   lacks `read:project`/`project`; no focus-stealing browser authorization was opened.
 - Electron `npm run check` passed the Node syntax and renderer contract checks;
-  `npm run capture` produced five real off-screen screenshots, including the
+  `npm run capture` produced seven real off-screen screenshots, including the
   tab-group, bulk-close, and memory-checkpoint surfaces; the fresh-profile
   memory self-test created two distinct local Git revisions; `npm run package`
   produced the Squirrel.Windows installer; and the packaged executable exited
