@@ -46,7 +46,7 @@ jobs:
       - name: Upload Electron installer bundle
         uses: actions/upload-artifact@v4
         with:
-          name: herng-ha-windows-${{ github.sha }}
+          name: electron-windows-${{ github.sha }}
           path: electron/dist/squirrel-windows/*
           if-no-files-found: error
 
@@ -62,8 +62,8 @@ jobs:
       - name: Download Electron installer bundle
         uses: actions/download-artifact@v4
         with:
-          name: herng-ha-windows-${{ github.sha }}
-          path: herng-ha-artifacts
+          name: electron-windows-${{ github.sha }}
+          path: electron-artifacts
       - name: Build installable artifacts
         run: uv build
       - name: Count release lines
@@ -74,7 +74,10 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
         run: |
           tag="automation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          gh release create "$tag" dist/* herng-ha-artifacts/* \
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          cat line-count.md > "$notes_file"
+          printf '\n\nTests passed on Windows and Linux for commit %s. The Electron Windows Squirrel installer bundle was built by the Windows runner.\n' "$GITHUB_SHA" >> "$notes_file"
+          gh release create "$tag" dist/* electron-artifacts/* \
             --target "$GITHUB_SHA" \
             --title "Automated release ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" \
-            --notes "$(cat line-count.md)\n\nTests passed on Windows and Linux for commit ${GITHUB_SHA}. The Electron Windows Squirrel installer bundle was built by the Windows runner."
+            --notes-file "$notes_file"
