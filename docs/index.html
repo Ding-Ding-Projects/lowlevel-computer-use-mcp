@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07111f">
+    <meta name="description" content="Run real GUI apps on invisible desktops and automate them without stealing focus.">
+    <meta property="og:title" content="lowlevel-computer-use-mcp — Headless desktop automation">
+    <meta property="og:description" content="Real GUI apps. Zero desktop clutter. Windows off-screen desktops and Linux Xvfb, exposed through MCP.">
+    <meta property="og:image" content="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/og.png">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/">
+    <meta name="twitter:card" content="summary_large_image">
+    <link rel="canonical" href="https://codingmachineedge.github.io/lowlevel-computer-use-mcp/">
+    <link rel="stylesheet" href="styles.css">
+    <title>lowlevel-computer-use-mcp — Headless desktop automation</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="lowlevel-computer-use-mcp home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>lowlevel-computer-use-mcp</span>
+      </a>
+      <nav aria-label="Primary navigation">
+        <a href="#how-it-works">How it works</a>
+        <a href="#capabilities">Capabilities</a>
+        <a href="#manual">Manual client</a>
+        <a class="nav-cta" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">View on GitHub</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span> Headless desktop automation for MCP</p>
+          <h1>Real GUI apps.<br><em>Zero desktop clutter.</em></h1>
+          <p class="lede">Run full desktop applications on an invisible Windows desktop or Linux virtual display. Agents can see, click, type, and capture them without hijacking your screen.</p>
+          <div class="hero-actions">
+            <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp/releases/download/automation-30792710849-1/lowlevel-computer-use-manual-0.1.0-win-x64.exe">Download Windows installer <span aria-hidden="true">↓</span></a>
+            <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp#quick-start-gui-installer--fully-automatic">Get started</a>
+            <a class="button secondary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">Explore the source <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="platforms" aria-label="Supported platforms">
+            <span>Windows off-screen desktop</span>
+            <span>Linux Xvfb</span>
+            <span>53 MCP tools</span>
+          </div>
+        </div>
+
+        <div class="desktop-demo" aria-label="Illustration of an application running on a headless desktop">
+          <div class="orbit orbit-one"></div>
+          <div class="orbit orbit-two"></div>
+          <div class="desktop-card">
+            <div class="desktop-label"><span></span> OFF-SCREEN DESKTOP · ACTIVE</div>
+            <div class="app-window">
+              <div class="window-bar">
+                <div class="traffic"><i></i><i></i><i></i></div>
+                <span>work · headless</span>
+              </div>
+              <div class="safety-banner">
+                <strong>AGENT TEMPORARY DESKTOP</strong>
+                <span>Complete the sign-in, then tell the agent.</span>
+                <b>EMERGENCY EXIT</b>
+              </div>
+              <div class="app-body">
+                <aside>
+                  <i></i><i></i><i></i><i></i>
+                </aside>
+                <div class="workspace">
+                  <div class="workspace-title"><span></span><span></span></div>
+                  <div class="terminal-line"><b>$</b> launch_on_headless_desktop</div>
+                  <div class="terminal-line muted"><b>✓</b> GUI ready · visible to agent only</div>
+                  <div class="progress"><span></span></div>
+                </div>
+              </div>
+            </div>
+            <div class="agent-status"><span class="pulse"></span><strong>Agent working</strong><small>Your desktop stays yours</small></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="promise" aria-label="Core promise">
+        <p>The desktop is now a background runtime—not a shared cursor.</p>
+      </section>
+
+      <section class="section" id="how-it-works">
+        <div class="section-heading">
+          <p class="eyebrow"><span></span> How it works</p>
+          <h2>Invisible by default.<br>Interactive when needed.</h2>
+          <p>Keep automation off your visible desktop from launch through verification. If a login or human-only step appears, reveal it safely and return it to the background.</p>
+        </div>
+        <ol class="steps">
+          <li><span>01</span><div><h3>Create</h3><p>Start an isolated off-screen desktop on Windows or an Xvfb display on Linux.</p></div></li>
+          <li><span>02</span><div><h3>Launch & automate</h3><p>Run real GUI apps, target their windows directly, and capture results without focus stealing.</p></div></li>
+          <li><span>03</span><div><h3>Reveal safely</h3><p>Show the desktop only for a human step, with a non-dismissible instruction banner and emergency exit.</p></div></li>
+        </ol>
+      </section>
+
+      <section class="section capabilities" id="capabilities">
+        <div class="section-heading compact">
+          <p class="eyebrow"><span></span> Built for capable agents</p>
+          <h2>Low-level control,<br>without the interruption.</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="featured">
+            <div class="feature-icon">◫</div>
+            <p class="tag">The main event</p>
+            <h3>Headless-with-GUI</h3>
+            <p>Unlike browser-only automation, full native applications run with a real interface—just not on the desktop you are using.</p>
+          </article>
+          <article><div class="feature-icon">◎</div><h3>Background targeting</h3><p>Click, type, and send keys to a specific window without bringing it forward.</p></article>
+          <article><div class="feature-icon">◌</div><h3>Silent startup</h3><p>Python GUI-subsystem launchers and hidden child-process flags prevent terminal flashes at login and runtime.</p></article>
+          <article><div class="feature-icon">◇</div><h3>Focus protection</h3><p>Foreground actions are blocked by default and require an explicit, user-approved handoff.</p></article>
+          <article><div class="feature-icon">▣</div><h3>Per-window capture</h3><p>Inspect an app even when it is occluded, unfocused, or running off-screen.</p></article>
+          <article><div class="feature-icon">⌁</div><h3>Safe human handoff</h3><p>Clear instructions, a persistent top banner, and a one-click emergency return.</p></article>
+          <article><div class="feature-icon">⌘</div><h3>Cross-platform</h3><p>Win32 off-screen desktops on Windows and Xvfb virtual displays on Linux.</p></article>
+          <article><div class="feature-icon">⧉</div><h3>Multi-agent rooms</h3><p>Create project/agent-namespaced desktops in one call, with no terminal popups or visible-desktop focus changes.</p></article>
+          <article><div class="feature-icon">⇄</div><h3>Trusted-LAN API</h3><p>Run the full MCP toolset, commands, and bounded file transfers from another agreed computer on your LAN, headless-first.</p></article>
+            <article><div class="feature-icon">▤</div><h3>Material 3 manual</h3><p>Use the bundled Electron client for workspaces, tool calls, local history, export, persisted settings, regex search, a local color-space translator, and per-target appearance presets.</p></article>
+          <article><div class="feature-icon">◷</div><h3>Reviewable history</h3><p>Combine search, dates, and action counts locally, then export the exact filtered command history.</p></article>
+          <article><div class="feature-icon">.*</div><h3>Safe regex builder</h3><p>Build and test Python regular expressions locally with syntax, capture, size, and timeout safeguards.</p></article>
+        </div>
+        <p class="section-note"><a href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp/tree/main/docs/features">Read the feature verification notes ↗</a></p>
+      </section>
+
+      <section class="section manual-section" id="manual">
+        <div class="section-heading">
+          <p class="eyebrow"><span></span> The longer guide</p>
+          <h2>Manual control with<br>the explanation intact.</h2>
+          <p>The Electron client is a hands-on companion to this site, not a replacement for the operational guide. Save a computer once, let a later agent pick it up, and keep the safety facts visible at every step. Current build code name: <strong>Classic Har Gow · 蝦餃</strong> · <a href="https://github.com/Ding-Ding-Projects/dim-sum-photos/releases/download/catalog-v1/hk-dish-0001-classic-har-gow.png">verified catalog photo ↗</a></p>
+        </div>
+        <div class="manual-grid">
+          <article><span class="manual-number">01</span><h3>Make a quiet room</h3><p>Choose a project and agent name, create one or many headless desktops, and launch a real GUI application without changing the user's input desktop. The same names appear in the API response so multiple agents can coordinate without guessing.</p><a href="features/headless-desktops.html">Headless desktop guide ↗</a></article>
+          <article><span class="manual-number">02</span><h3>Connect and save</h3><p>Host the API from the GUI or CLI, then connect to another agreed computer with its LAN URL. The saved connection is local app state that a later agent can select; the API intentionally has no key, so network scope and firewall rules are part of the configuration.</p><a href="features/trusted-lan-api.html">Trusted-LAN API guide ↗</a></article>
+          <article><span class="manual-number">03</span><h3>Inspect the record</h3><p>Run any tool by name, browse an application beside Quick launch or place a file/folder path into JSON, search local history with plain text or the bounded regex builder, export records, review notifications, save memory checkpoints, and follow every released change to its exact commit. The app's own settings and tab layout persist between sessions.</p><a href="features/electron-manual-client.html">Electron client guide ↗</a> · <a href="features/quick-launch-browser.html">Path browser guide ↗</a> · <a href="features/tab-management.html">Tab management guide ↗</a> · <a href="features/memory-checkpoints.html">Memory guide ↗</a></article>
+        </div>
+        <div class="manual-links"><a class="button secondary" href="features/quiet-processes.html">Read quiet-process safety ↗</a><a class="button secondary" href="api/">Open API/Postman reference ↗</a></div>
+      </section>
+
+      <section class="cta-panel">
+        <p class="eyebrow"><span></span> Give agents a desktop of their own</p>
+        <h2>Keep your screen.<br>Let the agent work.</h2>
+        <div class="install-command"><code>lowlevel-computer-use-manual-0.1.0-win-x64.exe</code><span>Windows Squirrel installer · release automation-30792710849-1</span></div>
+        <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp/releases/download/automation-30792710849-1/lowlevel-computer-use-manual-0.1.0-win-x64.exe">Download the verified Windows installer <span aria-hidden="true">↓</span></a>
+        <a class="button primary" href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">Open the GitHub repository <span aria-hidden="true">↗</span></a>
+      </section>
+    </main>
+
+    <footer>
+      <span>lowlevel-computer-use-mcp</span>
+      <span>Real desktop control for MCP agents.</span>
+      <a href="https://github.com/codingmachineedge/lowlevel-computer-use-mcp">GitHub ↗</a>
+    </footer>
+  </body>
+</html>

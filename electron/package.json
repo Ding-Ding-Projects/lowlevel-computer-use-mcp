@@ -1,0 +1,31 @@
+{
+  "name": "lowlevel-computer-use-manual",
+  "version": "0.1.0",
+  "private": true,
+  "author": "codingmachineedge",
+  "description": "Material 3 manual client for lowlevel-computer-use-mcp",
+  "main": "main.cjs",
+  "scripts": {
+    "start": "node launch.cjs",
+    "dev": "node launch.cjs",
+    "capture": "node launch.cjs --capture-dir=../docs/screenshots",
+    "check": "node --check main.cjs && node --check preload.cjs && node --check renderer/app.js && node contract-check.cjs",
+    "package": "electron-builder --win squirrel --publish never"
+  },
+  "devDependencies": {
+    "electron": "43.2.0",
+    "electron-builder": "^26.15.3"
+  },
+  "allowScripts": {
+    "electron@43.2.0": true,
+    "electron-winstaller@5.4.0": true
+  },
+  "build": {
+    "appId": "com.codingmachineedge.lowlevelcomputeruse.manual",
+    "productName": "Low-Level Computer-Use Manual",
+    "artifactName": "lowlevel-computer-use-manual-${version}-${os}-${arch}.${ext}",
+    "files": ["**/*", "!docs/screenshots/**", "!node_modules/.cache/**"],
+    "win": { "target": [{ "target": "squirrel", "arch": ["x64"] }] },
+    "squirrelWindows": { "iconUrl": "https://codingmachineedge.github.io/lowlevel-computer-use-mcp/og.png" }
+  }
+}

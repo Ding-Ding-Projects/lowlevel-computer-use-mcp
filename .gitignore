@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.uv/
+
+# uv lockfile is kept; uncomment to ignore
+# uv.lock
+
+# Captures produced at runtime
+captures/
+*.mp4
+*.png
+*.jpg
+*.jpeg
+!docs/**/*.png
+docs/screenshots-packaged/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+electron/node_modules/

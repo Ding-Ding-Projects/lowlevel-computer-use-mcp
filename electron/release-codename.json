@@ -1,0 +1,10 @@
+{
+  "catalogTag": "catalog-v1",
+  "dishId": "hk-dish-0001",
+  "codeName": "Classic Har Gow · 蝦餃",
+  "english": "Classic Har Gow",
+  "traditionalChinese": "蝦餃",
+  "imageFile": "hk-dish-0001-classic-har-gow.png",
+  "imageUrl": "https://github.com/Ding-Ding-Projects/dim-sum-photos/releases/download/catalog-v1/hk-dish-0001-classic-har-gow.png",
+  "altText": "Warm tea-house photograph of Classic Har Gow"
+}

@@ -1,0 +1,38 @@
+[project]
+name = "lowlevel-computer-use-mcp"
+version = "0.1.0"
+description = "Low-level computer-use MCP server for Windows: mouse, keyboard, shell commands, window management, process control, screenshots, cropping and screen recording."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "lowlevel-computer-use-mcp" }]
+keywords = ["mcp", "model-context-protocol", "computer-use", "automation", "windows"]
+
+dependencies = [
+    "mcp>=1.2.0",
+    "pydantic>=2.6",
+    "pyautogui>=0.9.54",
+    "pygetwindow>=0.0.9",
+    "psutil>=5.9",
+    "mss>=9.0",
+    "pillow>=10.0",
+    "numpy>=1.26",
+    "imageio>=2.34",
+    "imageio-ffmpeg>=0.5",
+]
+
+[project.scripts]
+lowlevel-computer-use-mcp = "lowlevel_computer_use_mcp.server:main"
+lowlevel-computer-use-cheap = "lowlevel_computer_use_mcp.server:cheap_entry"
+lowlevel-computer-use-regex-builder = "lowlevel_computer_use_mcp.regex_builder:main"
+
+[project.gui-scripts]
+lowlevel-computer-use-mcp-hidden = "lowlevel_computer_use_mcp.server:main"
+lowlevel-computer-use-mcp-installer = "lowlevel_computer_use_mcp.installer_gui:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lowlevel_computer_use_mcp"]

@@ -1,0 +1,33 @@
+# Managed by Desktop Material Cheap LFS. Review changes before committing.
+# Private repository opt-in: disabled
+name: Cheap LFS cloud compression
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cheap-lfs-compress-${{ github.run_id }}-${{ github.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  compress:
+    name: Compress release objects one by one
+    if: >-
+      github.ref_type == 'branch' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch) &&
+      (github.event.repository.private == false || false)
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Check out the pointer commit
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          fetch-depth: 1
+          sparse-checkout: .github
+          sparse-checkout-cone-mode: true
+      - name: Compress and adopt verified side assets
+        uses: Ding-Ding-Projects/desktop-material/.github/actions/cheap-lfs-cloud-compression@42e2cbcc9826e681324a0a7189497b84e3aad6e8

@@ -1,0 +1,107 @@
+name: Test and publish release
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.run_id }}-${{ github.run_attempt }}
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Sync locked environment
+        run: uv sync --frozen
+      - name: Run unit suite
+        run: uv run python -m unittest discover -s tests -v
+
+  electron:
+    name: Build Electron Windows installer
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: electron/package-lock.json
+      - name: Resolve public release code name
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
+        run: |
+          $catalog = Join-Path $env:RUNNER_TEMP 'dim-sum-catalog.json'
+          $used = Join-Path $env:RUNNER_TEMP 'used-release-notes.txt'
+          gh api -H 'Accept: application/vnd.github.raw+json' repos/Ding-Ding-Projects/dim-sum-photos/contents/catalog/index.json | Out-File -LiteralPath $catalog -Encoding utf8
+          gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].body' | Out-File -LiteralPath $used -Encoding utf8
+          python scripts/resolve_release_codename.py --catalog $catalog --used-notes $used --output electron/release-codename.json
+      - name: Install Electron dependencies
+        run: npm ci --prefix electron
+      - name: Check Electron source
+        run: npm run check --prefix electron
+      - name: Build Squirrel.Windows installer
+        run: npm run package --prefix electron
+      - name: Upload Electron installer bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: electron-windows-${{ github.sha }}
+          path: electron/dist/squirrel-windows/*
+          if-no-files-found: error
+
+  release:
+    name: Build wheel and publish one release
+    needs: [test, electron]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+      - name: Resolve public release code name
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
+        run: |
+          catalog="$RUNNER_TEMP/dim-sum-catalog.json"
+          used="$RUNNER_TEMP/used-release-notes.txt"
+          gh api -H 'Accept: application/vnd.github.raw+json' repos/Ding-Ding-Projects/dim-sum-photos/contents/catalog/index.json > "$catalog"
+          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].body' > "$used"
+          python scripts/resolve_release_codename.py --catalog "$catalog" --used-notes "$used" --output "$RUNNER_TEMP/release-codename.json"
+      - name: Download Electron installer bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: electron-windows-${{ github.sha }}
+          path: electron-artifacts
+      - name: Build installable artifacts
+        run: uv build
+      - name: Count release lines
+        run: python scripts/count_lines.py --markdown > line-count.md
+      - name: Publish uniquely tagged release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
+        run: |
+          tag="automation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          code_name=$(python -c 'import json, os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "release-codename.json"), encoding="utf-8"))["codeName"])')
+          image_url=$(python -c 'import json, os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "release-codename.json"), encoding="utf-8")).get("imageUrl") or "")')
+          cat line-count.md > "$notes_file"
+          printf '\n\nCode name: %s\nCatalog photo: %s\n\nTests passed on Windows and Linux for commit %s. The Electron Windows Squirrel installer bundle was built by the Windows runner.\n' "$code_name" "${image_url:-unavailable}" "$GITHUB_SHA" >> "$notes_file"
+          gh release create "$tag" dist/* electron-artifacts/* \
+            --target "$GITHUB_SHA" \
+            --title "Automated release ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" \
+            --notes-file "$notes_file"
