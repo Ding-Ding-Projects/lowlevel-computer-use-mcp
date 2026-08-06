@@ -22,6 +22,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
+      - name: Install Ubuntu GUI test dependency
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install --yes python3-tk
       - name: Sync locked environment
         run: uv sync --frozen
       - name: Run unit suite

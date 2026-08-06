@@ -41,11 +41,12 @@ Implemented in the working tree:
 
 Verification so far:
 
-- Python unit suite: 41 tests passed with one expected non-Windows branch skipped;
-  the new Cheap Version catalog and retired-startup tests are included.
-- `compileall` and `git diff --check` passed.
-- Electron contract verification and a packaged no-console check remain to run on
-  this branch before integration.
+- Python unit suite: 43 tests ran, with 42 passed and one expected non-Windows
+  branch skipped; the new Cheap Version catalog and retired-startup tests are
+  included.
+- `compileall`, `git diff --check`, `uv lock --check`, and `uv build` passed.
+- Electron contract verification and the packaged Squirrel.Windows installer
+  check passed.
 - Live user-profile migration is verified: the `lowlevel-computer-use-http` entry
   was removed from Claude, Codex, and OpenCode; `LowLevelComputerUseMCP` was
   removed from Task Scheduler; and no Startup-folder launcher remains.
@@ -55,16 +56,21 @@ Verification so far:
 - A real `pythonw.exe -m lowlevel_computer_use_mcp.server --help` launch exited
   successfully with zero matching top-level windows from the Cheap Version
   window enumeration. No non-Cheap Python process remains with `--http`.
-- `uv lock --check`, `uv build`, `npm run check`, and the Squirrel.Windows package
-  build passed. The package produced the Windows Squirrel installer under
-  `electron/dist/squirrel-windows/`.
+- `npm run check` passed. The package produced the Windows Squirrel installer
+  under `electron/dist/squirrel-windows/`.
+- The first Ubuntu release test exposed a missing `tkinter` runtime dependency;
+  `.github/workflows/ci-release.yml` now installs `python3-tk` before the locked
+  test environment is synchronized, so the installer migration tests exercise
+  the same GUI import path on both operating systems.
 
 ## Remote handoff
 
-- This file ships in the integration commit. Discussion #1 is the rolling source
+- This file ships in the integration commit. Issue #1 and Discussion #2 are the
+  rolling sources
   for its exact pushed hash, Actions run, release, Pages, and wiki evidence.
-- The final pre-push issue rescan found zero open issues.
-- Remote CI/release state is intentionally not predicted in this commit; the
-  Discussion records it as running, failed, or verified after the push.
+- GitHub Pages is enabled for Actions after the first deployment attempt found
+  no configured Pages site; the corrected deployment run is being monitored.
+- Remote CI/release state is recorded as running, failed, or verified in the
+  issue and Discussion rather than predicted here.
 - The final audit found no stash entries. The main checkout retains its unrelated
   `software/docker.exe` modification; it is outside this task and was not staged.
