@@ -18,6 +18,10 @@
   layout, with Git-backed restore revisions.
 - Per-target appearance editing with typography spacing, color translation,
   built-in presets, user presets, reset, export, and renderer self-tests.
+- Cheap Version as the primary local tool route, with registered-tool-only
+  discovery and no persistent MCP/HTTP process for ordinary calls.
+- Retired legacy HTTP/logon startup, migration of old client registrations, and
+  explicit opt-in gating for compatibility startup.
 
 ## Evidence still required
 
@@ -32,13 +36,13 @@
 
 - Headless-first Windows and Linux GUI automation.
 - Background HWND/window targeting and per-window capture.
-- Console-free Windows child processes, client registration, and user startup.
+- Console-free Windows child processes and quiet compatibility client registration;
+  the former user HTTP startup is retired.
 - Default focus guards for foreground input, window activation, UAC, and desktop handoff.
 - Local bounded Python regex builder with guided and raw modes.
 
 ## Next
 
-- Add a packaged Windows installer so startup does not depend on a mutable checkout.
 - Add authenticated non-loopback HTTP deployment guidance and tests.
 - Expand Linux live verification across X11 compositors and Xvfb versions.
 

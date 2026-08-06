@@ -12,7 +12,6 @@ contextBridge.exposeInMainWorld('lowlevel', {
   startApi: (host, port) => ipcRenderer.invoke('api:start', host, port),
   stopApi: () => ipcRenderer.invoke('api:stop'),
   apiStatus: () => ipcRenderer.invoke('api:status'),
-  installStartup: (host, port, admin) => ipcRenderer.invoke('startup:install', host, port, admin),
   removeStartup: () => ipcRenderer.invoke('startup:remove'),
   startupStatus: () => ipcRenderer.invoke('startup:status'),
   getSettings: () => ipcRenderer.invoke('settings:get'),

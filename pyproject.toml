@@ -9,7 +9,7 @@ authors = [{ name = "lowlevel-computer-use-mcp" }]
 keywords = ["mcp", "model-context-protocol", "computer-use", "automation", "windows"]
 
 dependencies = [
-    "mcp>=1.2.0",
+    "mcp>=1.2.0,<2.0.0",
     "pydantic>=2.6",
     "pyautogui>=0.9.54",
     "pygetwindow>=0.0.9",
@@ -28,6 +28,7 @@ lowlevel-computer-use-regex-builder = "lowlevel_computer_use_mcp.regex_builder:m
 
 [project.gui-scripts]
 lowlevel-computer-use-mcp-hidden = "lowlevel_computer_use_mcp.server:main"
+lowlevel-computer-use-cheap-hidden = "lowlevel_computer_use_mcp.server:cheap_entry"
 lowlevel-computer-use-mcp-installer = "lowlevel_computer_use_mcp.installer_gui:main"
 
 [build-system]

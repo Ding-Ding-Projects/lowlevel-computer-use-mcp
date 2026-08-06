@@ -15,10 +15,11 @@ History is stored locally under Electron's user-data directory. The History tab
 combines text/regex search with a date range and action filters derived from the
 actual recorded entries, and exports the currently filtered view as Markdown.
 
-The Workspaces tab can explicitly start/stop the trusted-LAN HTTP API, show its
-`/mcp` and `/health` URLs, and install or remove a hidden Windows logon task for
-the selected host and port. The startup action is user-triggered and the server
-itself prefers a headless desktop.
+The Workspaces tab can explicitly start/stop the retired trusted-LAN HTTP
+compatibility API and show its `/mcp` and `/health` URLs. It can remove an old
+Windows logon task, but it cannot install a new one. Local Tool runner calls use
+the Cheap Version, and the compatibility server itself prefers a headless
+desktop.
 
 Settings persist language mode, independent English/Cantonese funny levels,
 theme, density, accent, font scale, appearance values, tab state, connections,

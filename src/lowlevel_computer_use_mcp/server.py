@@ -418,11 +418,19 @@ def _is_admin() -> bool:
         return False
 
 
-def _server_launch_argument(http: bool, host: str, port: int) -> str:
-    """Argument string passed to console-free Python for a scheduled task."""
+def _server_launch_argument(
+    http: bool,
+    host: str,
+    port: int,
+    *,
+    legacy_http: bool = False,
+) -> str:
+    """Argument string passed to console-free Python for an explicit legacy task."""
     parts = ["-m", "lowlevel_computer_use_mcp.server"]
     if http:
         parts += ["--http", "--host", host, "--port", str(port)]
+        if legacy_http:
+            parts.append("--legacy-http")
     return subprocess.list2cmdline(parts)
 
 
@@ -516,14 +524,39 @@ def _run_powershell(body: str, require_admin: bool, timeout: float = 180.0) -> d
                 pass
 
 
-def _install_startup(http: bool, host: str, port: int, run_as_admin: bool) -> dict[str, Any]:
-    """Register a scheduled task that starts this server at user logon."""
+def _install_startup(
+    http: bool,
+    host: str,
+    port: int,
+    run_as_admin: bool,
+    *,
+    allow_legacy: bool = False,
+) -> dict[str, Any]:
+    """Register the retired server startup only after an explicit opt-in.
+
+    The Cheap Version is the normal route and is intentionally one-shot, so it
+    cannot be represented by a logon daemon.  Keeping the old registration
+    behind a named opt-in prevents an existing installer button or stale script
+    from silently recreating the console-prone HTTP path.
+    """
+    if not allow_legacy:
+        return {
+            "ok": False,
+            "returncode": 2,
+            "output": (
+                "Legacy Lowlevel HTTP logon startup is retired; no launcher was installed. "
+                "Use lowlevel-computer-use-cheap for normal tool calls, or pass "
+                "--legacy-http only when an existing HTTP client still requires the compatibility path."
+            ),
+        }
     executable, _ = hidden_server_command()
-    arg = _server_launch_argument(http, host, port).replace("'", "''")
+    arg = _server_launch_argument(http, host, port, legacy_http=http).replace("'", "''")
     if not run_as_admin:
         path = _startup_script_path()
         path.parent.mkdir(parents=True, exist_ok=True)
-        command = subprocess.list2cmdline([executable]) + " " + _server_launch_argument(http, host, port)
+        command = subprocess.list2cmdline([executable]) + " " + _server_launch_argument(
+            http, host, port, legacy_http=http
+        )
         script = (
             "Option Explicit\n"
             "Dim shell\n"
@@ -537,7 +570,7 @@ def _install_startup(http: bool, host: str, port: int, run_as_admin: bool) -> di
         return {
             "ok": True,
             "returncode": 0,
-            "output": f"Installed console-free user startup launcher at {path}.",
+            "output": f"Installed explicit legacy console-free user startup launcher at {path}.",
             "method": "startup-folder-pythonw",
         }
     executable_q = executable.replace("'", "''")
@@ -3218,11 +3251,12 @@ async def startup_status() -> str:
 
 
 # =========================================================================== #
-# CHEAP VERSION — no-MCP command-line fallback
+# CHEAP VERSION — primary local command-line route
 # =========================================================================== #
-# When MCP connections keep failing, every tool can be invoked directly from the
-# command line. This "Cheap Version" runs the exact same tool function in-process
-# and prints its JSON result — no MCP client, transport, or server needed.
+# Every tool can be invoked directly from the command line. This "Cheap Version"
+# runs the exact same tool function in-process and prints its JSON result — no MCP
+# client, transport, or server needed. The MCP server remains available for clients
+# that explicitly require the compatibility protocol.
 #
 #   lowlevel-computer-use-cheap <tool> [--key value ...] [--json '{...}']
 #   lowlevel-computer-use-mcp cheap <tool> [--key value ...]
@@ -3236,13 +3270,19 @@ async def startup_status() -> str:
 #   lowlevel-computer-use-cheap --list
 
 def _cheap_tool_names() -> list[str]:
-    names = []
-    for name, obj in globals().items():
-        if name.startswith("_") or name in ("main", "cheap_entry"):
-            continue
-        if inspect.iscoroutinefunction(obj):
-            names.append(name)
-    return sorted(names)
+    """Return only functions explicitly registered as MCP tools.
+
+    The HTTP helpers ``health`` and ``api_execute`` are also async functions,
+    but they are transport endpoints rather than desktop tools.  Discovering
+    every coroutine in module globals accidentally exposed those internals (and
+    any future async helper) through the Cheap Version.  FastMCP's registered
+    tool table is the authoritative, bounded list.
+    """
+    tool_manager = getattr(mcp, "_tool_manager", None)
+    registered = getattr(tool_manager, "_tools", {})
+    if not isinstance(registered, dict):
+        return []
+    return sorted(name for name in registered if name in globals())
 
 
 def _cheap_usage() -> str:
@@ -3320,6 +3360,7 @@ def _cheap_main(argv: list[str]) -> int:
 
 def cheap_entry() -> None:
     """Console-script entry point for the Cheap Version CLI."""
+    _ensure_standard_streams()
     sys.exit(_cheap_main(sys.argv[1:]))
 
 
@@ -3355,9 +3396,9 @@ def _ensure_standard_streams() -> None:
 def main() -> None:
     """CLI entry point.
 
-    Default: run the MCP server over stdio (for Claude Code / Codex).
-    Subcommands manage the boot-startup scheduled task. Flags switch transport
-    and elevation.
+    Default: run the compatibility MCP server over stdio (for clients that need it).
+    Local tool use should call the Cheap Version entry point instead. Startup
+    registration is retired unless its legacy compatibility flag is explicit.
     """
     _ensure_standard_streams()
 
@@ -3368,9 +3409,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="lowlevel-computer-use-mcp",
         description="Low-level computer-use MCP server. Subcommand `cheap` runs a tool "
-        "directly from the command line without MCP (fallback when connections fail).",
+        "directly from the command line without MCP (the primary local route).",
     )
     parser.add_argument("--http", action="store_true", help="Serve over streamable HTTP instead of stdio")
+    parser.add_argument(
+        "--legacy-http",
+        action="store_true",
+        help="Mark an explicit compatibility HTTP launch; never used by normal startup",
+    )
     parser.add_argument("--host", default=DEFAULT_HTTP_HOST, help="Host for --http mode")
     parser.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT, help="Port for --http mode")
     parser.add_argument(
@@ -3380,20 +3426,36 @@ def main() -> None:
     )
 
     sub = parser.add_subparsers(dest="cmd")
-    p_install = sub.add_parser("install-startup", help="Register a logon scheduled task to auto-start the server")
+    p_install = sub.add_parser(
+        "install-startup",
+        help="Register the retired compatibility logon launcher (explicit opt-in)",
+    )
     p_install.add_argument(
         "--admin-task",
         action="store_true",
-        help="Opt in to an elevated scheduled task (shows UAC); default uses a console-free user Startup launcher",
+        help="Opt in to an elevated scheduled task (shows UAC) for the legacy compatibility path",
+    )
+    p_install.add_argument(
+        "--legacy-http",
+        action="store_true",
+        help="Explicitly re-enable the retired HTTP logon launcher for a compatibility client",
     )
     p_install.add_argument("--no-admin", action="store_true", help=argparse.SUPPRESS)
     p_install.add_argument("--stdio", action="store_true", help="Start in stdio mode instead of HTTP")
     p_install.add_argument("--host", default=DEFAULT_HTTP_HOST)
     p_install.add_argument("--port", type=int, default=DEFAULT_HTTP_PORT)
-    sub.add_parser("uninstall-startup", help="Remove the auto-start scheduled task")
+    sub.add_parser("uninstall-startup", help="Remove the retired auto-start launcher")
+    sub.add_parser("retire-legacy-startup", help="Remove the retired auto-start launcher")
     sub.add_parser("startup-status", help="Show the auto-start task status")
 
     args = parser.parse_args()
+
+    if args.http and not args.legacy_http:
+        print(
+            "Legacy HTTP mode is retired; pass --legacy-http for an explicit compatibility launch.",
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
     if args.cmd == "install-startup":
         res = _install_startup(
@@ -3401,10 +3463,11 @@ def main() -> None:
             host=args.host,
             port=args.port,
             run_as_admin=args.admin_task and not args.no_admin,
+            allow_legacy=args.legacy_http,
         )
         print(res["output"])
         sys.exit(0 if res["ok"] else 1)
-    if args.cmd == "uninstall-startup":
+    if args.cmd in ("uninstall-startup", "retire-legacy-startup"):
         res = _uninstall_startup()
         print(res["output"])
         sys.exit(0 if res["ok"] else 1)

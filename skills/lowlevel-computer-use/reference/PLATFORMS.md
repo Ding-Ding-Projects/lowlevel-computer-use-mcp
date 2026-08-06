@@ -37,7 +37,8 @@ Check at runtime: `linux_status`, `ahk_status`, `wsl_status`. On Windows the
   uses `SwitchDesktop` to make the whole desktop interactive (e.g. for a login), then
   `hide_headless_desktop` switches back.
 - **No-window policy**: Windows subprocesses use `CREATE_NO_WINDOW` plus `SW_HIDE`;
-  client registration and user startup use `pythonw.exe`. Foreground calls require
+  compatibility client registration uses `pythonw.exe`; the retired user startup is
+  not installed. Foreground calls require
   explicit `confirm_focus_disruption:true`.
 - **AutoHotkey**: install with `winget install -e --id AutoHotkey.AutoHotkey`. The
   server auto-detects it (PATH / common dirs / `LOWLEVEL_CU_AHK`). Generated helpers

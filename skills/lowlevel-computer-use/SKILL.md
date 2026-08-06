@@ -134,11 +134,11 @@ verify with a screenshot.
   `wsl_status` / `ahk_status` / `linux_status` to check availability first.
 - Always pair headless/WSL **create** with **destroy/stop/close** to free resources.
 
-## Cheap Version (no-MCP fallback)
+## Cheap Version (primary local route)
 
-If the MCP connection keeps failing, every tool can be run directly from the command
+For ordinary local calls, every registered tool can be run directly from the command
 line — this is called the **Cheap Version**. It runs the same tool function and prints
-the same JSON, with no MCP client/transport involved:
+the same JSON, with no MCP client, transport, persistent server, or HTTP listener:
 
 ```bash
 lowlevel-computer-use-cheap <tool> [--key value ...] [--json '{...}']
@@ -149,9 +149,10 @@ lowlevel-computer-use-cheap press_keys --keys '["ctrl","s"]'
 lowlevel-computer-use-cheap --list      # list all tools
 ```
 
-You can run these via the `run_command` tool, the Bash tool, or a terminal. Every
-parameter in [reference/TOOLS.md](reference/TOOLS.md) is accepted as `--<param> <value>`
-(values are parsed as JSON when possible) or via `--json`.
+Transport endpoints such as `health` and `api_execute` are not Cheap Version tools.
+You can run the commands via the `run_command` tool, the Bash tool, or a terminal.
+Every parameter in [reference/TOOLS.md](reference/TOOLS.md) is accepted as
+`--<param> <value>` (values are parsed as JSON when possible) or via `--json`.
 
 Read [reference/TOOLS.md](reference/TOOLS.md) for the exact parameters of every tool
 before composing a non-trivial automation.

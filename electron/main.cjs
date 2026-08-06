@@ -75,9 +75,9 @@ function commandSpec() {
   return { file: 'uv', prefix: ['run', '--directory', repoDir, 'lowlevel-computer-use-cheap'] };
 }
 
-function serverSpec(host, port) {
+function legacyServerSpec(host, port) {
   const file = commandSpec().file;
-  return { file, args: ['run', '--directory', repoDir, 'lowlevel-computer-use-mcp', '--http', '--host', host, '--port', String(port)] };
+  return { file, args: ['run', '--directory', repoDir, 'lowlevel-computer-use-mcp', '--http', '--legacy-http', '--host', host, '--port', String(port)] };
 }
 
 function runHidden(file, args, options = {}) {
@@ -191,7 +191,7 @@ async function getChangelog() {
 
 async function startApi(host, port) {
   if (apiProcess && apiProcess.exitCode === null) return { ok: true, running: true, ready: true, host, port };
-  const spec = serverSpec(host, port);
+  const spec = legacyServerSpec(host, port);
   try {
     apiProcess = spawn(spec.file, spec.args, { cwd: repoDir, shell: false, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'] });
     apiProcess.on('exit', () => { apiProcess = null; });
@@ -221,13 +221,9 @@ function stopApi() {
   return { ok: true, running: false };
 }
 
-async function startupAction(action, host, port, admin = false) {
+async function startupAction(action) {
   const file = process.platform === 'win32' ? 'uv.exe' : 'uv';
   const args = ['run', '--directory', repoDir, 'lowlevel-computer-use-mcp', action];
-  if (action === 'install-startup') {
-    args.push('--host', host, '--port', String(port));
-    if (!admin) args.push('--no-admin');
-  }
   return runHidden(file, args);
 }
 
@@ -291,9 +287,8 @@ app.whenReady().then(() => {
   ipcMain.handle('api:start', (_event, host, port) => startApi(host, port));
   ipcMain.handle('api:stop', () => stopApi());
   ipcMain.handle('api:status', () => ({ running: Boolean(apiProcess && apiProcess.exitCode === null) }));
-  ipcMain.handle('startup:install', (_event, host, port, admin) => startupAction('install-startup', host, port, admin));
-  ipcMain.handle('startup:remove', () => startupAction('uninstall-startup', '127.0.0.1', 8765, false));
-  ipcMain.handle('startup:status', () => startupAction('startup-status', '127.0.0.1', 8765, false));
+  ipcMain.handle('startup:remove', () => startupAction('uninstall-startup'));
+  ipcMain.handle('startup:status', () => startupAction('startup-status'));
   ipcMain.handle('settings:get', () => memoryFallback().settings);
   ipcMain.handle('settings:set', (_event, settings) => { writeJson('settings.json', settings); return settings; });
   ipcMain.handle('history:get', () => readJson('history.json', []));
