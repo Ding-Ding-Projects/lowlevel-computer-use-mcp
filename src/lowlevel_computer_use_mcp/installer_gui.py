@@ -3,7 +3,7 @@
 One-click helper to:
   * install Python dependencies (uv sync)
   * register the server with Claude Code and Codex
-  * install / remove the boot-startup scheduled task (optionally as admin)
+  * remove the retired boot-startup scheduled task
   * install AutoHotkey (winget)
   * show current registration / startup status
 
@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -23,8 +24,10 @@ from pathlib import Path
 from tkinter import ttk
 
 from .process import run_hidden
+from .processes import hidden_server_command
 
 SERVER_KEY = "lowlevel-computer-use"
+LEGACY_HTTP_KEY = f"{SERVER_KEY}-http"
 CODEX_BLOCK_MARKER = f"[mcp_servers.{SERVER_KEY}]"
 
 
@@ -94,6 +97,7 @@ def action_uv_sync(log) -> None:
 
 def action_register_claude(log) -> None:
     log("== Registering with Claude Code (user scope) ==")
+    retire_legacy_http_registration(log)
     claude = shutil.which("claude")
     if claude:
         _run([claude, "mcp", "remove", "--scope", "user", SERVER_KEY], log)
@@ -126,6 +130,70 @@ def _register_claude_json(log) -> None:
     log(f"Wrote {SERVER_KEY} into {path}\n")
 
 
+def _remove_json_mcp_entry(path: Path, container_key: str, entry_key: str, log) -> bool:
+    """Remove one owned legacy MCP entry without disturbing other settings."""
+    if not path.exists():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        log(f"Could not inspect {path} while retiring {entry_key}: {exc}")
+        return False
+    container = data.get(container_key)
+    if not isinstance(container, dict) or entry_key not in container:
+        return False
+    del container[entry_key]
+    path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    log(f"Removed retired {entry_key} registration from {path}")
+    return True
+
+
+def _remove_toml_mcp_entry(path: Path, entry_key: str, log) -> bool:
+    """Remove one exact Codex MCP table while preserving every other table."""
+    if not path.exists():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except Exception as exc:  # noqa: BLE001
+        log(f"Could not inspect {path} while retiring {entry_key}: {exc}")
+        return False
+    section = re.compile(
+        rf"(?ms)^\[mcp_servers\.{re.escape(entry_key)}\]\r?\n.*?(?=^\[|\Z)"
+    )
+    updated, count = section.subn("", text, count=1)
+    if not count:
+        return False
+    path.write_text(updated, encoding="utf-8")
+    log(f"Removed retired {entry_key} registration from {path}")
+    return True
+
+
+def retire_legacy_http_registration(log) -> None:
+    """Remove the old always-on HTTP registration from supported client configs."""
+    home = Path.home()
+    _remove_json_mcp_entry(home / ".claude.json", "mcpServers", LEGACY_HTTP_KEY, log)
+    _remove_toml_mcp_entry(home / ".codex" / "config.toml", LEGACY_HTTP_KEY, log)
+    opencode_dir = home / ".config" / "opencode"
+    opencode_path = (
+        opencode_dir / "opencode.jsonc"
+        if (opencode_dir / "opencode.jsonc").exists()
+        else opencode_dir / "opencode.json"
+    )
+    _remove_json_mcp_entry(opencode_path, "mcp", LEGACY_HTTP_KEY, log)
+
+
+def action_retire_legacy(log) -> None:
+    """Disable the old HTTP/logon path while leaving cheap local calls available."""
+    log("== Retiring legacy HTTP registration and logon startup ==")
+    retire_legacy_http_registration(log)
+    _run(
+        [server_command(), *server_args(), "retire-legacy-startup"],
+        log,
+        cwd=str(repo_dir()),
+    )
+    log("Cheap Version remains the primary local tool route; no new logon launcher was installed.\n")
+
+
 def action_enable_yolo(log) -> None:
     """YOLO by default: auto-approve this server's tools in Claude Code (no prompts)."""
     log("== Enabling YOLO (auto-approve this server's tools) ==")
@@ -150,6 +218,7 @@ def action_enable_yolo(log) -> None:
 
 def action_register_codex(log) -> None:
     log("== Registering with Codex (~/.codex/config.toml) ==")
+    retire_legacy_http_registration(log)
     codex = shutil.which("codex")
     if codex:
         _run([codex, "mcp", "remove", SERVER_KEY], log)
@@ -162,8 +231,8 @@ def action_register_codex(log) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     existing = path.read_text(encoding="utf-8") if path.exists() else ""
     if CODEX_BLOCK_MARKER in existing:
-        log("Already present in config.toml.\n")
-        return
+        _remove_toml_mcp_entry(path, SERVER_KEY, log)
+        existing = path.read_text(encoding="utf-8")
     executable = server_command().replace("'", "''")
     args = ", ".join(f"'{a}'" for a in server_args())
     block = (
@@ -180,6 +249,7 @@ def action_register_codex(log) -> None:
 def action_register_opencode(log) -> None:
     """Register the console-free stdio server in OpenCode's user config."""
     log("== Registering with OpenCode (~/.config/opencode/opencode.json) ==")
+    retire_legacy_http_registration(log)
     config_dir = Path.home() / ".config" / "opencode"
     jsonc_path = config_dir / "opencode.jsonc"
     path = jsonc_path if jsonc_path.exists() else config_dir / "opencode.json"
@@ -202,21 +272,6 @@ def action_register_opencode(log) -> None:
     data.setdefault("$schema", "https://opencode.ai/config.json")
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
     log(f"Registered {SERVER_KEY} with the console-free launcher in {path}.\n")
-
-
-def action_install_startup(admin: bool, port: int, log) -> None:
-    log(f"== Installing boot startup (admin={admin}, port={port}) ==")
-    cmd = [server_command(), *server_args(), "install-startup", "--port", str(port)]
-    if admin:
-        cmd.append("--admin-task")
-    _run(cmd, log, cwd=str(repo_dir()))
-    log("Done.\n")
-
-
-def action_uninstall_startup(log) -> None:
-    log("== Removing boot startup ==")
-    _run([server_command(), *server_args(), "uninstall-startup"], log, cwd=str(repo_dir()))
-    log("Done.\n")
 
 
 def action_install_ahk(log) -> None:
@@ -300,21 +355,6 @@ def main() -> None:
     def run_async(fn, *args) -> None:
         threading.Thread(target=lambda: fn(*args, log), daemon=True).start()
 
-    # Options row
-    opts = ttk.Frame(root)
-    opts.pack(fill="x", padx=12)
-    admin_var = tk.BooleanVar(value=False)
-    port_var = tk.StringVar(value="8765")
-    ttk.Checkbutton(opts, text="Startup as Administrator", variable=admin_var).pack(side="left")
-    ttk.Label(opts, text="   HTTP port:").pack(side="left")
-    ttk.Entry(opts, textvariable=port_var, width=7).pack(side="left")
-
-    def _port() -> int:
-        try:
-            return int(port_var.get())
-        except ValueError:
-            return 8765
-
     # Buttons
     btns = ttk.Frame(root)
     btns.pack(fill="x", padx=12, pady=10)
@@ -326,11 +366,10 @@ def main() -> None:
     add(0, 0, "1. Install dependencies", lambda: run_async(action_uv_sync))
     add(1, 0, "2. Register Claude Code", lambda: run_async(action_register_claude))
     add(2, 0, "3. Register Codex", lambda: run_async(action_register_codex))
-    add(0, 1, "Install boot startup", lambda: run_async(action_install_startup, admin_var.get(), _port()))
-    add(1, 1, "Remove boot startup", lambda: run_async(action_uninstall_startup))
-    add(2, 1, "Install AutoHotkey", lambda: run_async(action_install_ahk))
-    add(0, 2, "Check status", lambda: run_async(action_status))
-    add(1, 2, "Register OpenCode", lambda: run_async(action_register_opencode))
+    add(0, 1, "Retire old logon start", lambda: run_async(action_retire_legacy))
+    add(1, 1, "Install AutoHotkey", lambda: run_async(action_install_ahk))
+    add(2, 1, "Check status", lambda: run_async(action_status))
+    add(0, 2, "Register OpenCode", lambda: run_async(action_register_opencode))
     add(2, 2, "Enable YOLO (no prompts)", lambda: run_async(action_enable_yolo))
 
     def do_all() -> None:
@@ -342,8 +381,9 @@ def main() -> None:
             action_register_codex(_log)
             action_register_opencode(_log)
             action_enable_yolo(_log)
+            action_retire_legacy(_log)
             action_status(_log)
-            _log("===== DONE. Restart Claude Code / Codex to load the server. =====\n")
+            _log("===== DONE. Cheap Version is primary; restart clients to load the quiet compatibility server. =====\n")
         run_async(seq)
 
     full = ttk.Button(btns, text="★ Full install (1+2+3)", command=do_all, width=26)

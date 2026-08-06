@@ -83,13 +83,18 @@ class HiddenProcessTests(unittest.TestCase):
                 patch.object(server, "_startup_script_path", return_value=script_path),
             ):
                 result = server._install_startup(
-                    http=True, host="127.0.0.1", port=8765, run_as_admin=False
+                    http=True,
+                    host="127.0.0.1",
+                    port=8765,
+                    run_as_admin=False,
+                    allow_legacy=True,
                 )
             body = script_path.read_text(encoding="utf-16")
 
         self.assertTrue(result["ok"])
         self.assertIn(r"C:\Python\pythonw.exe", body)
         self.assertIn("-m lowlevel_computer_use_mcp.server", body)
+        self.assertIn("--legacy-http", body)
         self.assertIn("shell.Run", body)
         self.assertIn(", 0, False", body)
         self.assertNotIn("uv run", body)
@@ -108,13 +113,31 @@ class HiddenProcessTests(unittest.TestCase):
             ) as run,
         ):
             server._install_startup(
-                http=True, host="127.0.0.1", port=8765, run_as_admin=True
+                http=True,
+                host="127.0.0.1",
+                port=8765,
+                run_as_admin=True,
+                allow_legacy=True,
             )
 
         body = run.call_args.args[0]
         self.assertIn("-Execute 'C:\\Python\\pythonw.exe'", body)
         self.assertIn("-m lowlevel_computer_use_mcp.server", body)
+        self.assertIn("--legacy-http", body)
         self.assertNotIn("uv run", body)
+
+    def test_startup_registration_is_retired_without_explicit_legacy_opt_in(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            script_path = Path(temp_dir) / "LowLevelComputerUseMCP.vbs"
+            with patch.object(server, "_startup_script_path", return_value=script_path):
+                result = server._install_startup(
+                    http=True, host="127.0.0.1", port=8765, run_as_admin=False
+                )
+
+        self.assertFalse(result["ok"])
+        self.assertEqual(result["returncode"], 2)
+        self.assertIn("retired", result["output"])
+        self.assertFalse(script_path.exists())
 
     @unittest.skipUnless(os.name == "nt", "Windows startup status tool required")
     def test_startup_status_recognizes_user_launcher(self):

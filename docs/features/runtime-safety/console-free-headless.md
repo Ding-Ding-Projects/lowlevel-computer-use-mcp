@@ -4,8 +4,9 @@
 
 Windows child processes are launched with `CREATE_NO_WINDOW` and a `STARTUPINFO`
 request for `SW_HIDE`. GUI automation starts on an off-screen Win32 desktop; Linux
-automation starts on Xvfb. Windows stdio clients and the boot HTTP service invoke
-the server through `pythonw.exe`.
+automation starts on Xvfb. Windows stdio compatibility clients and any explicitly
+opted-in legacy HTTP service invoke the server through `pythonw.exe`. The Cheap
+Version is the primary local route and does not start a persistent server.
 
 Foreground pointer, keyboard, window-action, window-reveal, UAC, and desktop-switch
 operations are blocked unless `confirm_focus_disruption=true`. That confirmation
@@ -14,10 +15,11 @@ background clicking is focus-safe only when an Xvfb `display` is supplied.
 
 ## Configuration
 
-- `install-startup` creates a UTF-16 VBS launcher in the current user's Startup
-  folder and starts `pythonw.exe -m lowlevel_computer_use_mcp.server --http`.
-- `install-startup --admin-task` opts into an elevated Scheduled Task and UAC.
-- The default endpoint is `http://127.0.0.1:8765/mcp`.
+- `install-startup` is retired and refuses to create a launcher.
+- `install-startup --legacy-http` explicitly opts into the old UTF-16 VBS or
+  elevated Scheduled Task path for a compatibility client.
+- The default local path is `lowlevel-computer-use-cheap`; the compatibility
+  endpoint remains `http://127.0.0.1:8765/mcp` only when started explicitly.
 - Claude, Codex, and OpenCode registrations should use the active environment's
   `pythonw.exe`, not `uv.exe` or a console-script `.exe`.
 
@@ -42,7 +44,9 @@ command output remain local unless another tool explicitly sends them elsewhere.
 ## Verification
 
 `tests/test_focus_and_process_safety.py` checks process flags, protected tools,
-startup generation, and headless-first MCP instructions. Live Windows verification
-records the foreground HWND before and after launching a real off-screen GUI and
-the `pythonw.exe` HTTP service, checks that the handle is unchanged, and enumerates
-zero top-level windows for the server process.
+retired-startup refusal, explicit legacy startup generation, and headless-first
+MCP instructions. `tests/test_cheap_entry.py` checks the bounded Cheap Version
+catalog and legacy registration migration. Live Windows verification records the
+foreground HWND before and after launching a real off-screen GUI and, only when
+needed for compatibility, the `pythonw.exe` HTTP service; it checks that the
+handle is unchanged and enumerates zero top-level windows for the server process.

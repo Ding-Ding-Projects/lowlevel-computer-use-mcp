@@ -3,12 +3,12 @@
 The pulled `main` checkout now contains multi-agent headless desktop APIs,
 quiet child-process launch helpers, automatic AutoHotkey installation in the GUI
 installer, a trusted-LAN Streamable HTTP API with command/file transfer routes,
-and an Electron Material 3 manual client under `electron/`. The client can host
-or schedule the API, save named remote computers, and route later tool calls to
-one of those saved connections.
+and an Electron Material 3 manual client under `electron/`. The client can
+explicitly host the retired compatibility API, save named remote computers, and
+route later tool calls to one of those saved connections; ordinary local calls
+use the Cheap Version.
 
-The untracked `Tools/Windows 11.iso` file was pre-existing user data and was
-preserved without inspection or staging. The current Electron pass also adds a
+The current Electron pass also adds a
 native inline Quick launch app browser with a visible Browse button, a complete tool catalog, independent
 tab-search regex state, a full-history changelog, persistent tab groups with
 reviewable bulk-close actions, a public catalog-backed release code name, and
@@ -18,38 +18,46 @@ should run the Windows-only headless desktop tests and a second-computer LAN
 check. Static Python compilation and model tests do not prove those runtime
 boundaries.
 
-## Current task: console-free, headless-first, focus-safe operation
+## Current task: make Cheap Version primary and retire legacy HTTP startup
 
 Implemented in the working tree:
 
-- Central Windows hidden-process policy (`CREATE_NO_WINDOW` + `SW_HIDE`).
-- `pythonw.exe` registration for Claude, Codex, and OpenCode.
-- UTF-16 per-user Startup launcher for the local HTTP MCP; elevated task is opt-in.
-- Default focus guards on all foreground-affecting MCP paths.
-- Win32 headless launch no longer requests a new console.
-- Bounded local Python `re` builder and categorized feature/API documentation.
+- The Cheap Version is the primary local tool route and exposes only registered
+  MCP tool functions; transport endpoints such as `/health` are not callable
+  through its CLI catalog.
+- The installer removes the retired `lowlevel-computer-use-http` entries from
+  Claude, Codex, and OpenCode configuration before registering quiet `pythonw`
+  compatibility stdio entries.
+- The old persistent HTTP/logon launcher is retired by default. `install-startup`
+  refuses unless `--legacy-http` is explicitly supplied; the GUI offers cleanup,
+  not a new logon service.
+- The Electron Tool runner uses the Cheap Version for local calls. Its LAN API
+  controls are labelled as explicit compatibility transport and no longer offer
+  logon installation.
+- The hidden GUI entry point uses the same Cheap Version implementation, and the
+  installer now imports the shared hidden-command helper correctly.
+- Feature, API, README, roadmap, and handoff documentation describe the new
+  default and the explicit compatibility boundary.
 
 Verification so far:
 
-- Full local suite: 27 tests passed on Windows with one expected non-Windows branch
-  skipped; `compileall`, `uv build`, and `git diff --check` passed.
-- Live off-screen GUI probe preserved the foreground HWND.
-- Live `pythonw.exe` HTTP startup bound port 8765, owned zero top-level windows,
-  and preserved the foreground HWND.
-- Claude, Codex, OpenCode stdio registrations and OpenCode boot HTTP status were
-  observed connected.
-- Streamable HTTP initialize returned 200 with a session ID, initialized returned
-  202, and tools/list returned 200.
-- GitHub Discussions and wiki support were enabled; rolling progress is Discussion #1.
-- GitHub Project access is externally blocked because the configured owner token
-  lacks `read:project`/`project`; no focus-stealing browser authorization was opened.
-- Electron `npm run check` passed the Node syntax and renderer contract checks;
-  `npm run capture` produced nine real off-screen screenshots, including the
-  tab-group, bulk-close, and memory-checkpoint surfaces; the fresh-profile
-  memory self-test created two distinct local Git revisions; `npm run package`
-  produced the Squirrel.Windows installer; and the packaged executable exited
-  successfully through the off-screen capture path. `npm audit --audit-level=high`
-  reported zero vulnerabilities.
+- Python unit suite: 41 tests passed with one expected non-Windows branch skipped;
+  the new Cheap Version catalog and retired-startup tests are included.
+- `compileall` and `git diff --check` passed.
+- Electron contract verification and a packaged no-console check remain to run on
+  this branch before integration.
+- Live user-profile migration is verified: the `lowlevel-computer-use-http` entry
+  was removed from Claude, Codex, and OpenCode; `LowLevelComputerUseMCP` was
+  removed from Task Scheduler; and no Startup-folder launcher remains.
+- The installed `venv-primary` environment runs the Cheap Version catalog without
+  `health` or `api_execute`, returns a real `get_screen_size` result, and has the
+  MCP dependency bounded to the compatible `<2.0.0` API range.
+- A real `pythonw.exe -m lowlevel_computer_use_mcp.server --help` launch exited
+  successfully with zero matching top-level windows from the Cheap Version
+  window enumeration. No non-Cheap Python process remains with `--http`.
+- `uv lock --check`, `uv build`, `npm run check`, and the Squirrel.Windows package
+  build passed. The package produced the Windows Squirrel installer under
+  `electron/dist/squirrel-windows/`.
 
 ## Remote handoff
 
@@ -58,6 +66,5 @@ Verification so far:
 - The final pre-push issue rescan found zero open issues.
 - Remote CI/release state is intentionally not predicted in this commit; the
   Discussion records it as running, failed, or verified after the push.
-- The sole pre-existing stash contains hydrated ISO/Docker binaries and is unrelated
-  to this task. It is retained because deleting or integrating it without owner
-  context would risk data loss.
+- The final audit found no stash entries. The main checkout retains its unrelated
+  `software/docker.exe` modification; it is outside this task and was not staged.

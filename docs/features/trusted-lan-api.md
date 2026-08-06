@@ -2,10 +2,12 @@
 
 ## Behavior
 
-Run `uv run lowlevel-computer-use-mcp --http --host 0.0.0.0 --port 8765` on the
-computer being controlled. Agents connect to the Streamable HTTP MCP endpoint at
+Run `uv run lowlevel-computer-use-mcp --http --legacy-http --host 0.0.0.0 --port 8765` only
+when a compatibility client explicitly requires the retired HTTP path. The Cheap
+Version is the primary local route and does not listen on a port. Compatibility
+clients connect to the Streamable HTTP MCP endpoint at
 `http://<computer-ip>:8765/mcp`; `/health` is a simple liveness check.
-The Electron manual uses the convenience JSON endpoint
+The Electron manual can use the convenience JSON endpoint
 `POST http://<computer-ip>:8765/api/execute` with
 `{"tool":"list_headless_desktops","arguments":{}}`; it delegates to the
 same registered tool functions as MCP.
@@ -26,6 +28,8 @@ for launches and window actions.
 
 ## Failure modes
 
+- The GUI installer does not enable this transport or install it at logon.
+- `install-startup` refuses unless `--legacy-http` is explicitly supplied.
 - A client using the wrong path should use `/mcp`, not `/health`.
 - A bound address that is not reachable is usually a firewall, routing, or
   Windows network-profile issue rather than an MCP tool failure.

@@ -46,12 +46,12 @@ server also exposes the primitives needed to automate and verify them end to end
 - ✂️ **Cropping** — crop any saved image to a sub-region
 - 🎥 **Screen recording** — record a monitor or region to mp4 in the background
 - 🛡️ **Run-as-admin** — per-command UAC elevation or whole-server elevation
-- 🚀 **Silent auto-start** — `pythonw.exe` starts the local HTTP server with no terminal window; elevation is opt-in
+- 🚀 **Quiet client registration** — `pythonw.exe` keeps the compatibility MCP stdio entry out of the user's desktop; no HTTP logon service is installed
 - 🟢 **AutoHotkey add-in** — run AHK scripts; `ControlSend`/`ControlClick` for rock-solid background input
 - 🐧 **Cross-platform** — the same tools work natively on **Linux** (X11 via xdotool/wmctrl), with **Xvfb** virtual displays for headless-with-GUI
 - 🌀 **Ephemeral WSL** — on a Windows host, spin up a throwaway Linux distro on demand, run commands, tear it down
 - 🧩 **GUI installer** — one window that installs everything automatically
-- 💸 **Cheap Version** — a no-MCP command-line fallback that runs any tool directly from CLI args, for when MCP connections keep failing
+- 💸 **Cheap Version** — the primary local command-line route that runs any registered tool directly from CLI args, without MCP or a listening server
 
 > ⚠️ **This server performs real, unsandboxed actions on the host machine** —
 > clicking, typing, killing processes and running shell/elevated commands with your
@@ -193,8 +193,9 @@ Every tool returns a JSON string `{"ok": true, ...}` on success or
 
 ## Quick start (GUI installer — fully automatic)
 
-The easiest path. It installs `uv` if missing, runs `uv sync`, and registers the
-server with both Claude Code and Codex automatically on launch.
+The easiest path. It installs `uv` if missing, runs `uv sync`, registers a quiet
+stdio compatibility server with the supported clients, and removes the retired
+HTTP/logon registration so local tool calls use the Cheap Version.
 
 Clone the repo:
 
@@ -216,13 +217,23 @@ uv sync
 .\.venv\Scripts\lowlevel-computer-use-mcp-installer.exe
 ```
 
-Then **restart Claude Code / Codex** so they spawn the server.
+Then **restart Claude Code / Codex / OpenCode** so they reload the quiet
+compatibility registration. The installer does not create a persistent HTTP
+server or a Windows logon launcher.
 
 ---
 
 ## Manual install
 
-Install dependencies and start the stdio server:
+The normal local route is the Cheap Version; it starts no MCP transport and no
+HTTP listener:
+
+```bash
+uv run lowlevel-computer-use-cheap --list
+```
+
+For a client that still needs MCP stdio, install dependencies and start the
+compatibility server:
 
 ```bash
 uv run lowlevel-computer-use-mcp
@@ -240,13 +251,13 @@ Then run it:
 lowlevel-computer-use-mcp
 ```
 
-## Remote LAN API
+## Optional legacy Remote LAN API
 
 The server already exposes MCP over Streamable HTTP. On the computer being
 controlled, bind it to the LAN interface:
 
 ```bash
-uv run lowlevel-computer-use-mcp --http --host 0.0.0.0 --port 8765
+uv run lowlevel-computer-use-mcp --http --legacy-http --host 0.0.0.0 --port 8765
 ```
 
 Agents on the trusted LAN connect to `http://<computer-ip>:8765/mcp`; health
@@ -256,16 +267,17 @@ reach the port can control the computer with the server's user privileges, so
 use Windows Firewall or a private VLAN and never forward port `8765` to the
 public internet.
 
-The Electron client can save a named connection and route manual tool calls to
+This compatibility transport is never enabled by the installer, GUI, or Windows
+logon startup. The Electron client can save a named connection and route manual tool calls to
 `POST http://<computer-ip>:8765/api/execute` with a JSON body such as:
 
 ```json
 {"tool":"list_headless_desktops","arguments":{}}
 ```
 
-The Electron manual client uses the same local cheap-tool API and starts child
-processes with hidden Windows startup flags, so dependency installation and
-manual tool calls do not open terminal windows.
+The Electron manual client uses the Cheap Version for local tool calls and starts
+compatibility child processes with hidden Windows startup flags, so dependency
+installation and manual tool calls do not open terminal windows.
 
 Captures (screenshots, recordings) are written to
 `~/lowlevel-computer-use-captures` by default. Override with the
@@ -275,7 +287,9 @@ Captures (screenshots, recordings) are written to
 
 ## Registering with clients
 
-Replace the path below with wherever you cloned this repo.
+Replace the path below with wherever you cloned this repo. These entries are the
+quiet compatibility MCP stdio path; use the Cheap Version directly for ordinary
+local tool calls.
 
 ### Claude Code
 
@@ -291,8 +305,8 @@ Or add this to `~/.claude.json` under `mcpServers`:
 {
   "mcpServers": {
     "lowlevel-computer-use": {
-      "command": "uv",
-      "args": ["run", "--directory", "C:\\path\\to\\lowlevel-computer-use-mcp", "lowlevel-computer-use-mcp"]
+      "command": "C:\\path\\to\\lowlevel-computer-use-mcp\\.venv\\Scripts\\pythonw.exe",
+      "args": ["-m", "lowlevel_computer_use_mcp.server"]
     }
   }
 }
@@ -304,8 +318,8 @@ Add this block to `~/.codex/config.toml`:
 
 ```toml
 [mcp_servers.lowlevel-computer-use]
-command = "uv"
-args = ["run", "--directory", "C:\\path\\to\\lowlevel-computer-use-mcp", "lowlevel-computer-use-mcp"]
+command = "C:\\path\\to\\lowlevel-computer-use-mcp\\.venv\\Scripts\\pythonw.exe"
+args = ["-m", "lowlevel_computer_use_mcp.server"]
 startup_timeout_sec = 60
 ```
 
@@ -330,11 +344,12 @@ approval_policy = "never"
 
 ---
 
-## Cheap Version (no-MCP fallback)
+## Cheap Version (primary local route)
 
-If MCP connections keep failing, you don't need MCP at all. The **Cheap Version** is
-a command-line fallback that runs the **exact same tool functions** in-process and
-prints the JSON result — no client, transport, or server connection involved.
+The **Cheap Version** is the primary local route. It runs the **exact same
+registered tool functions** in-process and prints the JSON result — no client,
+transport, HTTP listener, or persistent server connection involved. MCP stdio and
+the HTTP API remain compatibility paths for clients that explicitly require them.
 
 List every available tool:
 
@@ -682,7 +697,7 @@ run_command_as_admin { "command": "net session" }
 Or run the whole server elevated (intended for HTTP mode):
 
 ```bash
-uv run lowlevel-computer-use-mcp --http --admin
+uv run lowlevel-computer-use-mcp --http --legacy-http --admin
 ```
 
 Check elevation:
@@ -693,49 +708,39 @@ is_admin {}
 
 ---
 
-## Console-free startup
+## Console-free startup and legacy retirement
 
-Install the default per-user Startup launcher. It uses `wscript.exe` plus
-`pythonw.exe`, opens no terminal window, binds HTTP only to localhost, and needs no
-UAC prompt:
-
-```bash
-uv run lowlevel-computer-use-mcp install-startup
-```
-
-An elevated Scheduled Task is an explicit opt-in and may show UAC during setup:
+The old persistent HTTP/logon launcher is retired. The GUI installer removes its
+registration and the legacy HTTP entries from Claude, Codex, and OpenCode. To
+repeat that cleanup manually, run:
 
 ```bash
-uv run lowlevel-computer-use-mcp install-startup --admin-task
+uv run lowlevel-computer-use-mcp retire-legacy-startup
 ```
 
-Use a custom port:
+`install-startup` now refuses by default, so an accidental invocation cannot
+bring the old HTTP window back. It accepts `--legacy-http` only as an explicit
+compatibility escape hatch for an existing client that cannot yet migrate:
 
 ```bash
-uv run lowlevel-computer-use-mcp install-startup --port 9000
+uv run lowlevel-computer-use-mcp install-startup --legacy-http --port 8765
 ```
 
-Check the task status:
+Do not use that compatibility option for normal local calls. Use the Cheap
+Version instead. The quiet MCP stdio client registration uses `pythonw.exe`, and
+the packaged Electron app starts its local helper with hidden Windows startup
+flags; neither path installs a new logon HTTP service.
+
+To inspect or remove any old registration:
 
 ```bash
 uv run lowlevel-computer-use-mcp startup-status
-```
-
-Remove it:
-
-```bash
 uv run lowlevel-computer-use-mcp uninstall-startup
 ```
 
-Once the boot service runs in HTTP mode, point a client at it as a remote MCP
-server:
-
-```bash
-claude mcp add --transport http lowlevel-computer-use-boot http://127.0.0.1:8765/mcp
-```
-
-The startup process owns no top-level window. Tool-spawned Windows child processes
-also use `CREATE_NO_WINDOW` plus `SW_HIDE`. See
+No new top-level console window is created by the Cheap Version or quiet stdio
+registration. Tool-spawned Windows child processes also use `CREATE_NO_WINDOW`
+plus `SW_HIDE`. See
 [runtime safety](docs/features/runtime-safety/console-free-headless.md).
 
 ---

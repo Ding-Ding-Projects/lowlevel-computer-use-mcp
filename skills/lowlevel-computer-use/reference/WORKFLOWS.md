@@ -146,9 +146,11 @@ run_command_as_admin { "command": "net session" }   // UAC prompt if not elevate
 ## 12. Auto-start the server on boot
 
 ```jsonc
-install_startup {}                            // console-free user startup + localhost HTTP
 startup_status {}
 uninstall_startup {}
+
+// The old logon HTTP launcher is retired. For a one-off compatibility migration
+// only, use the CLI: lowlevel-computer-use-mcp install-startup --legacy-http.
 ```
 
 ---

@@ -287,7 +287,7 @@ No params. Tears down every throwaway distro this session created. → `{ok, des
 
 ---
 
-## Run-as-admin & boot startup (W)
+## Run-as-admin & retired startup compatibility (W)
 
 ### `is_admin` (W)
 No params. → `{ok, is_admin, platform}`.
@@ -296,15 +296,15 @@ No params. → `{ok, is_admin, platform}`.
 - `*command` str, `timeout` float 1–3600 (default 120). Triggers UAC if not elevated.
 → `{ok, returncode, output, elevated_prompt}`.
 
-### `install_startup` (W, destructive)
-- `run_as_admin` bool (default false), `http` bool (default true —
-  start in HTTP mode at boot), `host` str (default 127.0.0.1), `port` int (default 8765).
-- Default: UTF-16 user Startup launcher using `pythonw.exe`, with no console or UAC.
-  Elevated Scheduled Task is opt-in and UAC requires `confirm_focus_disruption:true`.
-  → `{ok, task_name, run_as_admin, mode, endpoint, output}`.
+### `install_startup` (W, destructive, retired)
+- The default call refuses to install a launcher. This prevents a stale client from
+  recreating the old persistent HTTP/logon path.
+- Use the CLI command `lowlevel-computer-use-mcp install-startup --legacy-http`
+  only for an existing compatibility client that cannot migrate yet.
+  → `{ok:false, returncode:2, output}` for the normal tool call.
 
 ### `uninstall_startup` (W, destructive)
-No params. Removes user startup without UAC; removing an elevated task requires an
+No params. Removes any retired user startup; removing an elevated task requires an
 already elevated server and otherwise returns a permission error. → `{ok, task_name, output}`.
 
 ### `startup_status` (W)
