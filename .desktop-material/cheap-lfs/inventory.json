@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "pointerSetSha256": "66b8aa6255997ffc9d0b2576969877b2f1d28d63c3bbe4074fc52be2b323b4be",
+  "assets": [
+    {
+      "path": "software/docker.exe",
+      "provider": "release",
+      "size": 638124464,
+      "objectSha256": "a5b5837542f2f57fadbb09db90a60c84f8efc0a65f8d6dcd2e5b9fca3a2b87e6",
+      "pointerBlobSha256": "b1e63c74bf3571537e60c2edb4fd181cfc22e0fe0698ff6a295e7bab4737912c"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+version desktop-material/cheap-lfs/v1
+release-tag assets
+asset-name docker.exe
+size 638124464
+sha256 a5b5837542f2f57fadbb09db90a60c84f8efc0a65f8d6dcd2e5b9fca3a2b87e6
+part 8448796198101171c9c921fe6e80789eed72e703eca7f264bbdaf0c8f19879d1 524288000 docker.exe.part001
+part 9c8b0628716ad5174775930fc6e3b8ac514f619089fb4d9440759b18ba2f7a50 113836464 docker.exe.part002
