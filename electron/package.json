@@ -26,6 +26,6 @@
     "artifactName": "lowlevel-computer-use-manual-${version}-${os}-${arch}.${ext}",
     "files": ["**/*", "!docs/screenshots/**", "!node_modules/.cache/**"],
     "win": { "target": [{ "target": "squirrel", "arch": ["x64"] }] },
-    "squirrelWindows": { "iconUrl": "https://codingmachineedge.github.io/lowlevel-computer-use-mcp/og.png" }
+    "squirrelWindows": { "iconUrl": "https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/og.png" }
   }
 }

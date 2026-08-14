@@ -1,5 +1,16 @@
 # Handoff
 
+## Repository ownership links
+
+The canonical repository, homepage, Pages metadata, release-download links, and
+Electron documentation/changelog URLs now use
+`Ding-Ding-Projects/lowlevel-computer-use-mcp`. The Pages site is
+`https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/`. The Windows
+installer links use the verified `automation-31156143884-1` release asset.
+
+The Electron `appId` remains unchanged because it is installed application
+identity rather than a repository link.
+
 The pulled `main` checkout now contains multi-agent headless desktop APIs,
 quiet child-process launch helpers, automatic AutoHotkey installation in the GUI
 installer, a trusted-LAN Streamable HTTP API with command/file transfer routes,

@@ -2,7 +2,7 @@
 
 > **Real GUI apps. Zero desktop clutter.** Give an MCP agent a desktop of its own.
 
-[Explore the project site](https://codingmachineedge.github.io/lowlevel-computer-use-mcp/) · [Jump to quick start](#quick-start-gui-installer--fully-automatic)
+[Explore the project site](https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/) · [Jump to quick start](#quick-start-gui-installer--fully-automatic)
 
 The headline feature is **headless desktop automation**: run full native GUI
 applications on an invisible Windows desktop or Linux Xvfb display, then let an
@@ -90,7 +90,7 @@ The Electron client is the local GUI for the same MCP surface. It creates
 project/agent headless rooms, hosts the trusted-LAN API, saves named computer
 connections for later agents, runs any tool by name, keeps local history, and
 provides persisted language, funny-level, tab, appearance, notification, and
-changelog controls. The older [GitHub Pages site](https://codingmachineedge.github.io/lowlevel-computer-use-mcp/)
+changelog controls. The [GitHub Pages site](https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/)
 remains the primary explanatory guide; the detailed feature articles live in
 [`docs/features`](docs/features/README.md).
 
@@ -200,7 +200,7 @@ HTTP/logon registration so local tool calls use the Cheap Version.
 Clone the repo:
 
 ```bash
-git clone https://github.com/codingmachineedge/lowlevel-computer-use-mcp.git
+git clone https://github.com/Ding-Ding-Projects/lowlevel-computer-use-mcp.git
 ```
 
 Enter it:
