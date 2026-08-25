@@ -2265,6 +2265,23 @@ async def create_headless_desktops(params: CreateHeadlessDesktopsInput) -> str:
 
 
 @mcp.tool(
+    name="native_backend_status",
+    annotations={
+        "title": "Native Backend Status",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
+)
+async def native_backend_status() -> str:
+    """Report whether the in-process C++ desktop bridge is active or why Python is the fallback."""
+    if (e := _require(winio, "winio (Windows)")):
+        return e
+    return _ok(**winio.native_backend_status())
+
+
+@mcp.tool(
     name="list_headless_desktops",
     annotations={
         "title": "List Headless Desktops",

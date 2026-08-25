@@ -52,6 +52,7 @@ server also exposes the primitives needed to automate and verify them end to end
 - 🌀 **Ephemeral WSL** — on a Windows host, spin up a throwaway Linux distro on demand, run commands, tear it down
 - 🧩 **GUI installer** — one window that installs everything automatically
 - 💸 **Cheap Version** — the primary local command-line route that runs any registered tool directly from CLI args, without MCP or a listening server
+- 🧱 **Native Windows resilience** — an in-process C++ desktop bridge owns hidden-desktop handles, while a console-free C++ stdio supervisor restarts an unexpectedly terminated MCP child with bounded backoff
 
 > ⚠️ **This server performs real, unsandboxed actions on the host machine** —
 > clicking, typing, killing processes and running shell/elevated commands with your
@@ -163,6 +164,7 @@ terminal or visible desktop window was opened while they were produced.
 | `crop_image` | Crop an existing image to a box |
 | `start_screen_recording` / `stop_screen_recording` / `recording_status` | mp4 recording |
 | `create_headless_desktop` | Create an off-screen desktop |
+| `native_backend_status` | Report whether the C++ desktop bridge is active and the exact Python fallback reason |
 | `create_headless_desktops` | Create multiple independent desktops with explicit names or a generated project/agent prefix |
 | `list_headless_desktops` | List desktops owned by this server process and their window counts |
 | `launch_on_headless_desktop` | Launch a GUI app onto it |
