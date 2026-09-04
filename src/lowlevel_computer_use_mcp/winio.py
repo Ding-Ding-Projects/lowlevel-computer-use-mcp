@@ -30,6 +30,8 @@ import threading
 from ctypes import wintypes
 from typing import Any, Callable, Optional
 
+from .native_win32 import NativeWin32Error, load_native_bridge
+
 # --------------------------------------------------------------------------- #
 # ctypes setup
 # --------------------------------------------------------------------------- #
@@ -587,10 +589,28 @@ kernel32.CreateProcessW.restype = wintypes.BOOL
 
 # name -> HDESK handle for desktops we created
 _DESKTOPS: dict[str, int] = {}
+_NATIVE_BRIDGE, _NATIVE_BRIDGE_ERROR = load_native_bridge()
+
+
+def native_backend_status() -> dict[str, Any]:
+    """Report the active desktop backend without claiming the fallback is native."""
+    return {
+        "available": _NATIVE_BRIDGE is not None,
+        "backend": "native-cpp" if _NATIVE_BRIDGE is not None else "python-ctypes",
+        "path": str(_NATIVE_BRIDGE.path) if _NATIVE_BRIDGE is not None else None,
+        "fallback_reason": _NATIVE_BRIDGE_ERROR,
+    }
 
 
 def create_desktop(name: str) -> dict[str, Any]:
     """Create or reopen an off-screen desktop in the current window station."""
+    if _NATIVE_BRIDGE is not None:
+        try:
+            result = _NATIVE_BRIDGE.create_desktop(name)
+        except NativeWin32Error as exc:
+            raise WinIOError(str(exc)) from exc
+        _DESKTOPS[name] = int(result["handle"])
+        return result
     existing = _DESKTOPS.get(name)
     if existing:
         return {
@@ -647,6 +667,13 @@ def list_desktops() -> list[dict[str, Any]]:
 
 def launch_on_desktop(name: str, command_line: str) -> dict[str, Any]:
     """Launch a process whose GUI appears on the off-screen desktop `name`."""
+    if _NATIVE_BRIDGE is not None:
+        if name not in _DESKTOPS:
+            create_desktop(name)
+        try:
+            return _NATIVE_BRIDGE.launch_on_desktop(name, command_line)
+        except NativeWin32Error as exc:
+            raise WinIOError(str(exc)) from exc
     if name not in _DESKTOPS:
         create_desktop(name)
     si = STARTUPINFO()
@@ -711,6 +738,16 @@ def list_desktop_windows(name: str) -> list[dict[str, Any]]:
 
 def close_desktop(name: str) -> dict[str, Any]:
     """Close our handle to the off-screen desktop (it is freed once no process uses it)."""
+    if _NATIVE_BRIDGE is not None:
+        _DESKTOPS.pop(name, None)
+        try:
+            result = _NATIVE_BRIDGE.close_desktop(name)
+        except NativeWin32Error as exc:
+            raise WinIOError(str(exc)) from exc
+        cached = _XDESK_CACHE.pop(name, None)
+        if cached:
+            user32.CloseDesktop(cached)
+        return result
     hdesk = _DESKTOPS.pop(name, None)
     if hdesk is None:
         return {"name": name, "closed": False, "note": "not tracked"}

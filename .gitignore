@@ -8,6 +8,7 @@ dist/
 .venv/
 venv/
 .uv/
+.native-build*/
 
 # uv lockfile is kept; uncomment to ignore
 # uv.lock

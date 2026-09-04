@@ -1,5 +1,23 @@
 # Handoff
 
+## Native Windows runtime and resilient transport
+
+The Windows package now contains a C++ DLL that owns named desktop handles for
+the lifetime of the server process and performs quiet process creation with
+optional GUI-readiness waiting. A separate GUI-subsystem C++ supervisor proxies
+stdio byte-for-byte and performs bounded child restart without creating a console
+window. Installer registration prefers that supervisor when packaged and keeps
+the existing `pythonw.exe` route as the explicit fallback. The independent
+`lowlevel-computer-use-cheap` entry point remains available whether or not MCP is
+running.
+
+Focused evidence on Windows: the native build succeeded with MSVC 19.51; six
+native bridge tests passed with one expected non-Windows branch skipped; eight
+headless multi-agent tests passed; and the live native round trip created,
+reopened, launched on, and closed a named desktop without a terminal window.
+The new `native_backend_status` tool reports the loaded DLL, active backend, ABI,
+or exact fallback reason.
+
 ## Repository ownership links
 
 The canonical repository, homepage, Pages metadata, release-download links, and

@@ -41,5 +41,10 @@ def pythonw_executable() -> str:
 
 
 def hidden_server_command() -> tuple[str, list[str]]:
-    """Command/arguments for a console-free server process."""
-    return pythonw_executable(), ["-m", "lowlevel_computer_use_mcp.server"]
+    """Prefer the native crash-resilient stdio supervisor, without weakening fallback."""
+    pythonw = pythonw_executable()
+    if os.name == "nt":
+        supervisor = Path(__file__).resolve().parent / "native" / "lowlevel_mcp_supervisor.exe"
+        if supervisor.is_file():
+            return str(supervisor), [pythonw, "-m", "lowlevel_computer_use_mcp.server"]
+    return pythonw, ["-m", "lowlevel_computer_use_mcp.server"]
