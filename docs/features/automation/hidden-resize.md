@@ -7,7 +7,7 @@ The caller must freshly prove launch ancestry, native process incarnation and HW
 {"desktop_name":"Owned-Capture","handle":12345,"pid":6789,"creation_filetime":"134360000000000000","executable_path":"C:\\Example\\App.exe","expected_outer":[0,0,1200,800],"width":760,"height":560}
 ```
 
-Pass this JSON to the cheap CLI on standard input. The worker opens only the exact existing
+Pass this JSON through the cheap CLI's existing `--json <JSON>` option. The worker opens only the exact existing
 named desktop in the current window station. Default, Winlogon and Disconnect are rejected.
 It attaches its own thread, enumerates only that desktop and matches exact HWND/native PID.
 A retained query/synchronize process handle validates exact decimal FILETIME and executable
