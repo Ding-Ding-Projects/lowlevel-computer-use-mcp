@@ -198,3 +198,9 @@ no installed/shared helper cutover or deletion occurred.
 ## Background navigation repair
 
 The sender now maps extended scan codes into the correct message flag. Three focused tests pass after thirteen assertions reproduced the prior behavior. Exact root build and rebuilt-server runtime verification remain pending. See docs/features/automation/background-keys.md.
+
+## Background navigation repair · 背景導覽修正
+
+Source `5012390519d7b2a396510e46567e9fabcf1a7135` passed four focused tests and the isolated root build. Three real Flutter views accepted Tab, Page Down and search text at 800 × 600 with doubled bilingual text. Their owned processes and desktops were closed. The earlier default-environment build attempted to replace an in-use environment and partly removed it; the original Python 3.12.14 environment was restored and its server module imported successfully. Existing registered server processes were not terminated. New builds can select a separate environment through `-EnvironmentPath`. No new installer or full input-matrix claim is made.
+
+四項指定測試、獨立環境根目錄建置及三個實際工作區嘅捲動與輸入驗證均通過。原有註冊伺服器程序未有終止；受建置影響嘅原環境已修復。新安裝包及完整輸入矩陣仍未驗證。

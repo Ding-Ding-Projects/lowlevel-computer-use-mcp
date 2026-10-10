@@ -84,3 +84,9 @@ captures and all raw producer records remain private; tracked summaries are sani
 
 - [x] Preserve E0 extended-key identity and cover ordinary keys with focused regressions.
 - [ ] Verify rebuilt persistent-server navigation in a real hidden application.
+
+## Background navigation repair · 背景導覽修正
+
+- [x] Preserve extended navigation identity, including prefix-free mapping results.
+- [x] Pass four focused regressions, exact isolated root build, and real three-workspace scroll/input verification.
+- [ ] Verify broader modifier combinations and physical display scaling.

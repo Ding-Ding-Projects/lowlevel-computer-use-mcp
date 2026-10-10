@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "sourceCommit": "5012390519d7b2a396510e46567e9fabcf1a7135",
+  "wheelSha256": "fce8c50e14100f9792b43b00ad889ec570418dd028602ffca08ac61b059c23d8",
+  "buildCommand": "build.bat /s -EnvironmentPath .bootstrap/navigation-verification-venv",
+  "buildExitCode": 0,
+  "focusedTests": 4,
+  "regressionRedAssertions": 10,
+  "targetSourceCommit": "fafca0e8f908768b6c0e4ff4094fd99575875e0e",
+  "targetExecutableSha256": "466e9e330e4307321ebcd0cc88c2c89b8540ea7c078db2ebbe2178668287b178",
+  "scope": [
+    "services",
+    "scheduled-tasks",
+    "processes"
+  ],
+  "viewport": [
+    800,
+    600
+  ],
+  "textScale": 2,
+  "language": "English/Cantonese bilingual",
+  "theme": "dark",
+  "route": "loopback compatibility HTTP with native hidden desktop and targeted Win32 messages",
+  "observations": {
+    "pageDownScroll": true,
+    "keyboardSearchInput": true,
+    "ownedProcessAbsence": true,
+    "ownedDesktopClosure": true
+  },
+  "limitations": [
+    "Painted Flutter frames are not native-compositor evidence.",
+    "Physical DPI, all popup states, modifier combinations and all keyboard layouts were not verified.",
+    "Exact frame timestamps are unavailable."
+  ]
+}
