@@ -8,6 +8,8 @@ dist/
 .venv/
 venv/
 .uv/
+.bootstrap/
+.agent/
 .native-build*/
 
 # uv lockfile is kept; uncomment to ignore

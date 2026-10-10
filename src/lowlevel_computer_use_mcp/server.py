@@ -1449,6 +1449,33 @@ async def resize_window(params: ResizeWindowInput) -> str:
         return _err(f"Failed to resize window: {type(exc).__name__}: {exc}")
 
 
+class HiddenResizeInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+    desktop_name: str
+    handle: int
+    pid: int
+    creation_filetime: str
+    executable_path: str
+    expected_outer: list[int]
+    width: int
+    height: int
+
+
+@mcp.tool(name="resize_hidden_window", annotations={"title": "Resize Exact Hidden Window", "readOnlyHint": False, "destructiveHint": False, "idempotentHint": False, "openWorldHint": False})
+async def resize_hidden_window(params: HiddenResizeInput) -> str:
+    """Resize only an exact named hidden desktop HWND with fresh native identity and outer geometry.
+
+    Caller must freshly verify launch ancestry and HWND ownership before each call.
+    No title selection, desktop discovery, activation, showing or process termination.
+    Dimensions and returned outer/client rectangles are physical pixels.
+    """
+    from .hidden_resize import resize_hidden_window as perform
+    try:
+        return json.dumps(perform(params.model_dump()))
+    except Exception as exc:
+        return _err(f"Hidden resize rejected: {type(exc).__name__}: {exc}")
+
+
 class WindowActionName(str, Enum):
     FOCUS = "focus"
     MINIMIZE = "minimize"

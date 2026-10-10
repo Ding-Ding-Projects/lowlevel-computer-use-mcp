@@ -1,5 +1,7 @@
 # lowlevel-computer-use-mcp
 
+[Exact hidden-desktop resize](docs/features/automation/hidden-resize.md) adds explicit desktop/identity/geometry binding. Source controls do not establish runtime acceptance.
+
 > **Real GUI apps. Zero desktop clutter.** Give an MCP agent a desktop of its own.
 
 [Explore the project site](https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/) · [Jump to quick start](#quick-start-gui-installer--fully-automatic)

@@ -49,3 +49,13 @@
 
 Items remain proposals until code, tests, and release artifacts are linked from
 `HANDOFF.md`.
+
+# Hidden resize recovery
+
+- [x] Add exact-desktop native-incarnation source operation.
+- [x] Preserve ordinary resize and avoid activation/discovery/termination.
+- [x] Add focused fake-native controls.
+- [ ] Verify isolated root build and output hashes.
+- [ ] Obtain two independent source reviews.
+- [ ] Verify authorized hidden-target geometry.
+- [ ] Integrate through owning coordinator.

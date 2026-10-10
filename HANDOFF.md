@@ -103,3 +103,7 @@ Verification so far:
   issue and Discussion rather than predicted here.
 - The final audit found no stash entries. The main checkout retains its unrelated
   `software/docker.exe` modification; it is outside this task and was not staged.
+
+# Hidden resize recovery
+
+Isolated source and fake-adapter controls add exact named-desktop resize without changing ordinary resize. Installed editable runtime and active captures remain untouched. Root build/output review and two independent source reviews precede actual resizing. Kernel geometry, application behavior and installed cutover remain unverified. The coordinator owns integration and pushes.
