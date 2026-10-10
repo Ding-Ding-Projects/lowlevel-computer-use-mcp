@@ -3,6 +3,13 @@ from unittest.mock import patch
 from lowlevel_computer_use_mcp import winio
 
 class NavigationKeyEncodingTests(unittest.TestCase):
+    def test_dedicated_navigation_keys_remain_extended_without_mapper_prefix(self):
+        for vk, scan in [(0x21, 0x49), (0x22, 0x51), (0x23, 0x4F), (0x24, 0x47), (0x25, 0x4B), (0x26, 0x48), (0x27, 0x4D), (0x28, 0x50), (0x2D, 0x52), (0x2E, 0x53)]:
+            with self.subTest(vk=vk), patch.object(winio.user32, 'MapVirtualKeyW', return_value=scan):
+                down, up = winio._key_lparams(vk)
+                self.assertEqual(down, 1 | (scan << 16) | (1 << 24))
+                self.assertEqual(up, down | (3 << 30))
+
     def test_extended_scan_code_sets_bit_24_without_leaking_prefix(self):
         for vk, scan in [(0x21, 0xE049), (0x22, 0xE051), (0x23, 0xE04F), (0x24, 0xE047), (0x25, 0xE04B), (0x26, 0xE048), (0x27, 0xE04D), (0x28, 0xE050), (0x2D, 0xE052), (0x2E, 0xE053), (0x5B, 0xE05B), (0x2C, 0xE037)]:
             with self.subTest(vk=vk), patch.object(winio.user32, 'MapVirtualKeyW', return_value=scan) as mapper:
