@@ -1,5 +1,5 @@
 [CmdletBinding(PositionalBinding=$false)]
-param([switch]$BootstrapOnly, [switch]$Silent, [Parameter(ValueFromRemainingArguments=$true)][string[]]$RemainingArguments)
+param([switch]$BootstrapOnly, [switch]$Silent, [string]$EnvironmentPath, [Parameter(ValueFromRemainingArguments=$true)][string[]]$RemainingArguments)
 foreach($argument in $RemainingArguments){
  if($argument -notin @("/s","--silent")){throw "Unsupported argument: $argument"}
  $Silent=$true
@@ -23,12 +23,23 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory($archive,$unpacked)
 $uv=Get-ChildItem -LiteralPath $unpacked -Recurse -Filter uv.exe | Select-Object -First 1 -ExpandProperty FullName
 if(-not $uv){throw 'Pinned uv executable is absent'}
-& $uv sync --frozen --python 3.13.15
-if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-if($BootstrapOnly){exit 0}
-& $uv build --wheel
-if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
-& (Join-Path $root '.venv/Scripts/python.exe') -m compileall -q src/lowlevel_computer_use_mcp
-if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+$previousEnvironment=$env:UV_PROJECT_ENVIRONMENT
+try {
+ if($EnvironmentPath){
+  $environment=[IO.Path]::GetFullPath($EnvironmentPath)
+ }else{
+  $environment=Join-Path $root '.venv'
+ }
+ $env:UV_PROJECT_ENVIRONMENT=$environment
+ & $uv sync --frozen --python 3.13.15
+ if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+ if($BootstrapOnly){exit 0}
+ & $uv build --wheel
+ if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+ & (Join-Path $environment 'Scripts/python.exe') -m compileall -q src/lowlevel_computer_use_mcp
+ if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+}finally{
+ $env:UV_PROJECT_ENVIRONMENT=$previousEnvironment
+}
 Write-Output 'Build complete: isolated locked Python environment, wheel and bytecode. Existing optional C++ binaries are not required by the ctypes hidden-resize worker.'
 exit 0

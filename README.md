@@ -798,6 +798,8 @@ MIT
 
 Run `build.bat` for the isolated locked Python wheel and `build-installer.bat` for the existing manual-client Squirrel.Windows installer. Both bootstrap their required tools without modifying another environment. Packaging is unsigned and may trigger unknown-publisher or SmartScreen warnings. See [producer details and verification limits](docs/features/releases/README.md).
 
+If a running server is using `.venv`, preserve that server and run `build.bat /s -EnvironmentPath .bootstrap/build-venv` to build in a separate environment. The selected environment supplies both dependency synchronization and bytecode validation; the wheel output stays in `dist/`. The default remains `.venv`. Do not replace an environment while a server is using it.
+
 ### Current bounded recovery evidence
 
 Source `1fe2a321c22114dd921be9f27b51c0e97b4ace36` passed exact `build.bat /s`
