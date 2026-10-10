@@ -1,5 +1,68 @@
 # Handoff
 
+## Current hidden resize recovery
+
+The canonical source was cloned and verified before isolated recovery. The
+current implementation is preserved at `1fe2a321c22114dd921be9f27b51c0e97b4ace36`.
+Later documentation changes do not rebind these producer results to a new source.
+
+Exact `build.bat /s` and `build-installer.bat /s` both exited 0. Each retained
+122 unchanged tracked inputs plus source/tree/index/ref/status. Their complete
+output inventories contain 16,064 and 18,606 rows. Independent byte audit covered
+18,728 unique paths with zero differences. The wheel passed CRC and exact worker/
+server source-byte comparison. No fresh-environment bootstrap claim is made.
+
+The genuine Squirrel full package passed all 89 entries and RELEASES SHA1/size
+verification. Setup/main/stub/updater are unsigned; two vendor graphics DLLs retain
+valid catalog signatures. Eight packaged runtime/catalog source files match.
+The independent bounded package/privacy review accepted the inspected entries and
+app.asar pattern scan, with zero matches. This is bounded package evidence, not
+installation, updater, packaged runtime or publication acceptance.
+
+A source-bound native resize at `5aa63767d491e7de104ae9d2ab4eb206560b0a80`
+produced a 1222 by 911 physical outer rectangle, 1200 by 900 physical client,
+DPI 144 and 800 by 600 renderer at DPR 1.5. The operation source is unchanged in
+1fe2. The owner retained 25 validated captures/layouts and normal-close absence
+proof. No physical 100-percent display-scale, native input or restart claim follows.
+Consumer identities, captures and raw machine-specific receipts remain private.
+
+The source operation has eleven focused controls and deliberate omission witnesses.
+Installer boundaries have seven focused controls and deliberate silent-binding,
+self-copy, signing-environment and inherited-config omission witnesses.
+
+### Preserved failed attempts
+
+- `d6c5697`: root build failed because Get-FileHash was unavailable; module-independent
+  .NET hashing/archive extraction repaired bootstrap.
+- The first root installer returned 2 with an incorrect nonapplicability claim;
+  the existing manual client already had a supported Squirrel target.
+- `a18cd48`: build passed; installer exited 1 after interpreting /s as a codename
+  path. Explicit non-positional binding repaired argument handling.
+- `13dcbd9`: build passed; real Squirrel packaging exited 1 because generated config
+  lost the inherited icon and product settings. Deep-copying the real package
+  build configuration repaired that boundary.
+- A BOM-unaware inspection attempt failed on valid RELEASES text. The original
+  inspector result is retained; BOM-aware byte inspection passed without changing
+  package bytes.
+
+All original failed receipts and final setup/package/feed bytes remain in private
+owner-managed evidence storage. Only public-safe summaries are tracked here.
+See [producer documentation](docs/features/releases/README.md) and the
+[versioned verification summary](docs/features/releases/verification-1fe2.json).
+
+### Remaining owner actions
+
+Integration and release remain coordinator-owned. Installation/update lifecycle,
+optional scratch catalog packaging, packaged runtime and fresh-machine bootstrap
+remain unverified. The installed/shared helper inventory retained fifteen unchanged
+rows. No installation, cutover, integration, release or publication occurred in
+this isolated recovery lane.
+
+## Historical inherited baseline
+
+The records below predate this isolated recovery. Their older workflow and runtime
+claims are retained as history and are superseded by the current scope above.
+
 ## Native Windows runtime and resilient transport
 
 The Windows package now contains a C++ DLL that owns named desktop handles for
@@ -103,23 +166,3 @@ Verification so far:
   issue and Discussion rather than predicted here.
 - The final audit found no stash entries. The main checkout retains its unrelated
   `software/docker.exe` modification; it is outside this task and was not staged.
-
-# Hidden resize recovery
-
-Isolated source and fake-adapter controls add exact named-desktop resize without changing ordinary resize. Installed editable runtime and active captures remain untouched. Root build/output review and two independent source reviews precede actual resizing. Kernel geometry, application behavior and installed cutover remain unverified. The coordinator owns integration and pushes.
-
-## Verified producer boundary
-
-Exact root build.bat at df157d7c0467365b1b64738edbf0b735dbb2660b exited 0 with unchanged tracked input hashes. The emitted 18-entry wheel passed CRC and exact worker/server byte comparison; SHA-256 is 364d79e50ef9e2a7f94607e69c5b93f7b6f399daea7bb78068b531c8c1e5d641. The isolated cheap CLI catalog returned 0 and includes resize_hidden_window. Seven adapter controls passed; deliberate native-identity omission failed and exact restoration passed. These do not prove kernel resizing.
-
-The first d6c5697 root producer failed because Get-FileHash was unavailable; its raw log remains retained separately. Module-independent .NET hashing/archive extraction repaired that bootstrap. The former root build-installer.bat exit 2 incorrectly claimed nonapplicability; the manual client already has a real Squirrel target. That earlier output is retained as a failed entrypoint receipt, not installer proof. The existing installed runtime inventory retained 15 source/native/entrypoint files with zero byte mismatches. Independent source reviews and actual owned target geometry remain pending. All raw producer and negative receipts remain in the owner-only external verification ledger.
-
-Independent review repair: current input desktop is checked before dispatch and during observation; unavailable/matching input desktops fail closed. Every DPI/desktop restoration is attempted independently and any failure prevents success. Eleven focused controls pass. Unique active-input-omission and cleanup-stop-after-fault witnesses each returned red 1 and exact-restored green 0. The earlier producer remains historical, and a renewed frozen root producer and two refreshed reviews are required before actual resizing.
-
-## Installer entrypoint correction awaiting verification
-
-The corrected root installer entrypoint bootstraps Python and compatible Node/npm, runs the locked manual-client Squirrel producer with a unique output directory, and writes source/output receipts even after a child failure. Signing variables are removed from child environments only. Generated catalog configuration stays outside tracked source. The release workflow uses only root entrypoints, branch pushes and dispatch, no deletion/tag recursion, no tests/lint, and defensive failed-output retention. A reviewed bundled catalog image is attached alongside unsigned assets and actual workflow timing. Two source reviews precede real producer verification. No new installer or release success is claimed.
-
-Actual a18 root build.bat /s passed with unchanged source/index/ref and 3427 output rows. Actual build-installer.bat /s exited 1 with unchanged source/index/ref and 13504 output rows: positional silent input was misread as a codename path after locked dependency installation; Squirrel packaging did not execute. The original receipt remains retained. Explicit non-positional root argument binding now accepts /s and --silent without moving ReleaseCodename. Renewed review and real producers remain required.
-
-Actual 13dc root build.bat /s passed with complete unchanged binding and 13516 output rows. Its installer reached real Squirrel packaging, then exited 1 because external configuration had replaced the existing package build configuration and lost squirrelWindows.iconUrl. The complete unchanged binding and 16052 outputs are retained. The producer now deep-copies the actual package build configuration before scoped output/signing/catalog overrides. Seven focused controls pass, including actual app identity, product name, artifact naming, file selection, Squirrel icon URL and x64 target preservation; deliberate base-configuration omission turned red and exact restoration green. Renewed review and actual producers remain required.

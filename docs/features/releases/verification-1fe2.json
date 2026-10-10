@@ -1,0 +1,105 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "1fe2a321c22114dd921be9f27b51c0e97b4ace36",
+  "sourceTree": "d2de709b113a70b30570c246d16faab5604207d8",
+  "trackedInputCount": 122,
+  "producers": [
+    {
+      "entrypoint": "build.bat /s",
+      "exitCode": 0,
+      "startedUtc": "2026-10-10T12:39:32.183546+00:00",
+      "completedUtc": "2026-10-10T12:43:41.469462+00:00",
+      "elapsedSeconds": 249.2859501838684,
+      "outputCount": 16064,
+      "sourceUnchanged": true,
+      "logSha256": "8d2e9e8302d60cf870c5693781a0cf7b3eeacb3a727cc5c39839d6d91b8c4141",
+      "outputInventorySha256": "b7d4809a60a2e4372e9d6a9c0f8182b628dbc206ff3d1f8c5b5dfcefec8f8575"
+    },
+    {
+      "entrypoint": "build-installer.bat /s",
+      "exitCode": 0,
+      "startedUtc": "2026-10-10T12:44:10.170808+00:00",
+      "completedUtc": "2026-10-10T12:50:55.521886+00:00",
+      "elapsedSeconds": 405.3511219024658,
+      "outputCount": 18606,
+      "sourceUnchanged": true,
+      "logSha256": "d5c8a8583837d9696933889dbdb8de50602efde26694ae068c758210eb6d2cd2",
+      "outputInventorySha256": "2e0e5d8647e3bccb3a447318e41b5e2af7e01f22281788607a918398d0723b99"
+    }
+  ],
+  "independentAudit": {
+    "uniquePaths": 18728,
+    "differences": 0,
+    "sourceFrozen": true
+  },
+  "assets": [
+    {
+      "name": "lowlevel-computer-use-manual-0.1.0-full.nupkg",
+      "bytes": 141152298,
+      "sha256": "816371bbe9d3df654ef2a80e2686db193953d37c65ea024575714e1858e6a02e"
+    },
+    {
+      "name": "lowlevel-computer-use-manual-0.1.0-win-x64.exe",
+      "bytes": 141845504,
+      "sha256": "65c2ed254d3e734eaef03382310ccc5975576965ad59bd8ac78272778af961c0"
+    },
+    {
+      "name": "RELEASES",
+      "bytes": 99,
+      "sha256": "c2807f389088d4842ef6128c09ebb4c88a70b5125b45b9328d038f3f7701cb9c"
+    },
+    {
+      "name": "Setup.exe",
+      "bytes": 141845504,
+      "sha256": "65c2ed254d3e734eaef03382310ccc5975576965ad59bd8ac78272778af961c0"
+    }
+  ],
+  "fullPackage": {
+    "entries": 89,
+    "uncompressedBytes": 366503112,
+    "allEntriesDecoded": true,
+    "allCrcValid": true,
+    "releasesSha1": "14b9637311e13dce96b2ee66d378d652ca7d8769",
+    "releasesBytes": 141152298,
+    "releasesMatches": true,
+    "packagedSourceFiles": 8,
+    "sourceMismatches": 0
+  },
+  "signatures": {
+    "setup": "NotSigned",
+    "mainPayload": "NotSigned",
+    "executionStub": "NotSigned",
+    "squirrelUpdater": "NotSigned",
+    "vendorCatalogSigned": [
+      "d3dcompiler_47.dll",
+      "dxil.dll"
+    ]
+  },
+  "boundedPrivacyReview": {
+    "status": "accepted",
+    "privateEntryOrAsarPatternMatches": 0,
+    "scope": "Reviewed package entries and app.asar patterns; not a proof of all possible sensitive content"
+  },
+  "nativeResize": {
+    "lowlevelSourceCommit": "5aa63767d491e7de104ae9d2ab4eb206560b0a80",
+    "operationSourceUnchangedInProducer": true,
+    "physicalOuterWidth": 1222,
+    "physicalOuterHeight": 911,
+    "physicalClientWidth": 1200,
+    "physicalClientHeight": 900,
+    "nativeDpi": 144,
+    "rendererWidth": 800,
+    "rendererHeight": 600,
+    "devicePixelRatio": 1.5,
+    "geometryReceiptSha256": "37881989d601cb69bb60c109bc3732afd3903f27dd561573477655b8e16e28c8",
+    "ownerValidatedCaptureCount": 25,
+    "ownerValidatedLayoutCount": 25
+  },
+  "limits": [
+    "Existing-host build and package evidence, not fresh-environment bootstrap proof",
+    "No installed cutover, installation/update lifecycle or packaged runtime acceptance",
+    "Optional generated catalog override was not exercised by these /s producers",
+    "No physical 100-percent display-scale, native input or restart proof",
+    "No integration, remote release or publication claim"
+  ]
+}

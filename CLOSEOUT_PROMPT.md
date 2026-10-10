@@ -1,13 +1,27 @@
 # Continuation
 
-Continue bounded hidden-resize recovery. Preserve installed editable runtime and active captures. Fresh caller ancestry/window proof remains mandatory. Complete isolated root build, retain source/output ledger outside source and obtain two independent reviews before actual resizing. Root coordination owns integration/push. Do not install into another environment, restart helpers, publish, delete work or infer kernel acceptance from adapter controls.
+Continue only the bounded hidden-resize recovery and root producer correction.
+Verified producer source: 1fe2a321c22114dd921be9f27b51c0e97b4ace36.
+Both exact root entrypoints with /s exited 0, each with 122 unchanged tracked inputs.
+Complete build/installer output inventories: 16064/18606 rows. Independent audit:
+18728 unique paths, zero differences. Current documentation-only changes do not
+rebind historical producers to a newer source.
 
-Verified producer: source df157d7c0467365b1b64738edbf0b735dbb2660b, root build.bat exit 0, unchanged tracked bytes, wheel SHA-256 364d79e50ef9e2a7f94607e69c5b93f7b6f399daea7bb78068b531c8c1e5d641. The prior installer entrypoint exit 2 was an incorrect nonapplicability claim and is retained as a failed entrypoint receipt. Seven fake-adapter controls and identity-omission red/restored-green exist. No actual resizing, installed cutover or release occurred. Two source reviews remain required before target use.
+The genuine unsigned Squirrel package passed 89-entry CRC/decompression and
+RELEASES SHA1/size consistency. Setup/main/stub/updater are NotSigned; two vendor
+DLLs have valid catalog signatures. Eight packaged runtime/catalog files match.
+The bounded independent package/privacy review accepted its inspected scope.
+Read docs/features/releases/verification-1fe2.json for public-safe exact facts.
 
-Independent review repair: current input desktop is checked before dispatch and during observation; unavailable/matching input desktops fail closed. Every DPI/desktop restoration is attempted independently and any failure prevents success. Eleven focused controls pass. Unique active-input-omission and cleanup-stop-after-fault witnesses each returned red 1 and exact-restored green 0. The earlier producer remains historical, and a renewed frozen root producer and two refreshed reviews are required before actual resizing.
+Native resize source 5aa63767d491e7de104ae9d2ab4eb206560b0a80 drove one owned
+hidden target at renderer 800x600, physical client 1200x900, DPI144/DPR1.5.
+Operation source is unchanged in 1fe2. Do not infer physical 100-percent scaling,
+native input, restart or a complete runtime feature matrix.
 
-The root installer/bootstrap and release wiring correction is awaiting two source reviews before any real producer. Existing manual-client Squirrel packaging is the supported target. Generated codename data remains outside source, child signing environments are isolated, and failed outputs are retained without masking failures. No installer, installation or release success from this correction is claimed.
-
-Actual a18 root build.bat /s passed with unchanged source/index/ref and 3427 output rows. Actual build-installer.bat /s exited 1 with unchanged source/index/ref and 13504 output rows: positional silent input was misread as a codename path after locked dependency installation; Squirrel packaging did not execute. The original receipt remains retained. Explicit non-positional root argument binding now accepts /s and --silent without moving ReleaseCodename. Renewed review and real producers remain required.
-
-Actual 13dc root build.bat /s passed with complete unchanged binding and 13516 output rows. Its installer reached real Squirrel packaging, then exited 1 because external configuration had replaced the existing package build configuration and lost squirrelWindows.iconUrl. The complete unchanged binding and 16052 outputs are retained. The producer now deep-copies the actual package build configuration before scoped output/signing/catalog overrides. Seven focused controls pass, including actual app identity, product name, artifact naming, file selection, Squirrel icon URL and x64 target preservation; deliberate base-configuration omission turned red and exact restoration green. Renewed review and actual producers remain required.
+Preserve earlier bootstrap, false installer nonapplicability, silent-argument and
+lost-config failures and every original evidence byte privately. Never commit
+full binary outputs, consumer identities, machine paths, announcements or secrets.
+The installed/shared helper remains unchanged. No install/update lifecycle,
+optional generated catalog packaging, packaged runtime, fresh-machine bootstrap,
+integration, remote release or publication is claimed. The coordinator owns
+integration/push and any actual release. Do not install or cut over helpers.

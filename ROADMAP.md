@@ -52,21 +52,30 @@ Items remain proposals until code, tests, and release artifacts are linked from
 
 # Hidden resize recovery
 
-- [x] Add exact-desktop native-incarnation source operation.
-- [x] Preserve ordinary resize and avoid activation/discovery/termination.
-- [x] Add focused fake-native controls.
-- [x] Verify isolated root build and output hashes (source df157d7, exact build.bat exit 0, emitted wheel inspected).
-- [ ] Obtain two independent source reviews.
-- [ ] Verify authorized hidden-target geometry.
-- [ ] Integrate through owning coordinator.
-
-- [x] Reject observed current input desktops and attempt all worker restorations independently, with eleven focused controls and two deliberate red/restored-green witnesses.
-- [ ] Complete renewed root producer and independent acceptance before target resizing.
+- [x] Verify the canonical clone and isolate owned recovery work.
+- [x] Add exact-desktop, native-incarnation resize without changing ordinary resize.
+- [x] Reject observed current input desktops and attempt all worker restorations.
+- [x] Complete eleven focused source controls and deliberate omission witnesses.
+- [x] Complete independent source reviews.
+- [x] Verify one source-bound owned native resize at DPI144/DPR1.5 and renderer 800x600.
+- [x] Complete exact root build/output verification and independent byte audit at 1fe2.
+- [ ] Integrate through the owning coordinator and verify the remote source.
 
 ## Installer entrypoint correction
 
-- [x] Replace the incorrect unsupported entrypoint with the existing Squirrel producer and isolated bootstrap.
-- [x] Correct release routing and retain safe failed-producer outputs.
-- [ ] Complete two independent source reviews.
-- [ ] Run corrected root build and installer entrypoints and inspect unsigned package consistency.
-- [ ] Verify actual release assets, source binding and timing separately from installed runtime.
+- [x] Replace the incorrect unsupported entrypoint with the existing Squirrel producer.
+- [x] Repair silent argument binding and preserve inherited packaging configuration.
+- [x] Keep generated catalog data outside source and isolate child signing environments.
+- [x] Correct release routing and defensive failed-output retention.
+- [x] Complete seven focused controls, negative witnesses and independent source reviews.
+- [x] Run exact root build/installer entrypoints on 1fe2 and verify actual package bytes.
+- [x] Verify all 89 package entries, RELEASES consistency and unsigned project executables.
+- [x] Complete bounded independent package/privacy review with declared limits.
+- [ ] Exercise the optional generated catalog packaging path.
+- [ ] Prove fresh-environment bootstrap separately from this existing-host run.
+- [ ] Verify installation/update lifecycle and packaged runtime in an authorized environment.
+- [ ] Verify an actual normal release, source binding, assets and measured workflow timing.
+
+The native resize evidence does not prove physical 100-percent display scaling,
+native input, restart or a complete application feature matrix. Original consumer
+captures and all raw producer records remain private; tracked summaries are sanitized.

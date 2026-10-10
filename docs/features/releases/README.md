@@ -39,5 +39,4 @@ RELEASES hashes and sizes, full-package decompression and actual unsigned assets
 before accepting the producer. Release readback verifies normal classification,
 source tag and asset names separately. Release notes disclose unsigned assets and
 unknown-publisher/SmartScreen warnings, local verification limits and measured
-workflow timing. The correction is source-only until two reviews and real root
-producers finish.
+workflow timing. The accepted 1fe2 source completed both real root producers. All 89 package entries, RELEASES consistency, unsigned project executables and eight packaged source files were verified, followed by an independent bounded package/privacy review. See [exact public-safe results](verification-1fe2.json). Installation/update lifecycle, optional catalog override, packaged runtime, fresh-machine bootstrap and release/publication remain unverified.

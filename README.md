@@ -797,3 +797,16 @@ MIT
 ## Reproducible Windows package producers
 
 Run `build.bat` for the isolated locked Python wheel and `build-installer.bat` for the existing manual-client Squirrel.Windows installer. Both bootstrap their required tools without modifying another environment. Packaging is unsigned and may trigger unknown-publisher or SmartScreen warnings. See [producer details and verification limits](docs/features/releases/README.md).
+
+### Current bounded recovery evidence
+
+Source `1fe2a321c22114dd921be9f27b51c0e97b4ace36` passed exact `build.bat /s`
+and `build-installer.bat /s`, with 122 unchanged tracked inputs per producer.
+Independent byte audit covered 18,728 unique paths with zero differences. The
+Squirrel full package passed all 89 entries and RELEASES hash/size verification;
+setup and project executables are unsigned. A source-bound native hidden resize
+also reached renderer 800x600 at physical client 1200x900 and DPI144/DPR1.5.
+See the [verification summary](docs/features/releases/verification-1fe2.json) and
+[current handoff](HANDOFF.md) for prior failures, exact hashes and limits.
+Installation/update lifecycle, optional generated catalog packaging, packaged
+runtime, fresh-machine bootstrap and actual release/publication remain unverified.

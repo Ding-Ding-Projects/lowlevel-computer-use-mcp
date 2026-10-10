@@ -42,3 +42,16 @@ actual resize. No installed cutover is part of this recovery.
 Primary contracts: [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos),
 [SetThreadDesktop](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setthreaddesktop),
 [OpenDesktopW](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-opendesktopw).
+
+## Observed native boundary
+
+At source 5aa63767d491e7de104ae9d2ab4eb206560b0a80, the isolated CLI resized
+one exact owned hidden target from physical outer 1822x1139 to 1222x911, retaining
+its origin. The result independently matched physical client 1200x900, native
+DPI144 and renderer 800x600 at DPR1.5. The input desktop remained different from
+the target. Owner-held capture/layout and normal-close absence receipts remain
+private. The operation source is unchanged in the verified 1fe2 producer.
+The geometry receipt SHA-256 is
+37881989d601cb69bb60c109bc3732afd3903f27dd561573477655b8e16e28c8.
+This proves that bounded native resize, not physical 100-percent scaling, native
+input, restart, installed helper cutover or a complete feature matrix.
