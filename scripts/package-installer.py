@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 import uuid
+import copy
 
 
 def digest(path):
@@ -30,6 +31,15 @@ def ensure_setup_alias(bundle):
     if executables[0].resolve() != setup.resolve():
         shutil.copy2(executables[0], setup)
     return setup
+
+
+def packaging_configuration(base, output):
+    """Preserve the supported producer configuration before scoped overrides."""
+    config = copy.deepcopy(base)
+    config.setdefault("directories", {})["output"] = str(output)
+    config.setdefault("win", {})["signAndEditExecutable"] = False
+    config["forceCodeSigning"] = False
+    return config
 
 
 class ChildExit(Exception):
@@ -72,8 +82,8 @@ def main():
         if exit_code:
             raise ChildExit(exit_code)
         # Override only packaging configuration, leaving product source untouched.
-        config = {"directories": {"output": str(run / "payload")},
-                  "win": {"signAndEditExecutable": False}, "forceCodeSigning": False}
+        package = json.loads((root / "electron/package.json").read_text(encoding="utf-8"))
+        config = packaging_configuration(package["build"], run / "payload")
         if args.codename:
             data = json.loads(args.codename.read_text(encoding="utf-8-sig"))
             if not isinstance(data, dict) or not isinstance(data.get("codeName"), str):
@@ -82,7 +92,7 @@ def main():
             catalog.mkdir()
             staged = catalog / "release-codename.json"
             staged.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-            config["files"] = ["**/*", "!release-codename.json", "!docs/screenshots/**", "!node_modules/.cache/**",
+            config["files"] = list(config.get("files", ["**/*"])) + ["!release-codename.json",
                                {"from": str(catalog), "to": ".", "filter": ["release-codename.json"]}]
             receipt["catalogSha256"] = digest(staged)
         config_path = run / "builder.json"

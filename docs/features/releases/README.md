@@ -7,6 +7,8 @@ major 22 with npm. Otherwise it verifies and extracts portable Node 22.16.0 from
 the official distribution into the ignored local bootstrap directory. Global
 runtimes, installed helpers and signing stores remain untouched.
 
+The generated configuration starts from an exact deep copy of the existing package build configuration, retaining app identity, product naming, file selection, Squirrel icon URL and x64 target. Only output, unsigned settings and optional catalog mapping are overridden.
+
 Each run has a unique ignored `dist/installer/<id>` output directory. Its JSON
 receipt retains the source hash, tracked before/after hashes, index trees, actual
 child exit codes, tool/configuration hashes and generated assets. An optional

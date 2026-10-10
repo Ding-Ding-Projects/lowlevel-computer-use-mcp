@@ -12,6 +12,20 @@ spec.loader.exec_module(installer)
 
 
 class Controls(unittest.TestCase):
+    def test_real_supported_packaging_configuration_survives_overrides(self):
+        root = Path(__file__).resolve().parents[1]
+        base = json.loads((root / "electron/package.json").read_text())["build"]
+        before = json.loads(json.dumps(base))
+        config = installer.packaging_configuration(base, Path("fixture-output"))
+        self.assertEqual(base, before)
+        for key in ["appId", "productName", "artifactName", "files", "squirrelWindows"]:
+            self.assertEqual(config[key], base[key], key)
+        self.assertEqual(config["win"]["target"], [{"target": "squirrel", "arch": ["x64"]}])
+        self.assertTrue(config["squirrelWindows"]["iconUrl"].startswith("https://"))
+        self.assertFalse(config["win"]["signAndEditExecutable"])
+        self.assertFalse(config["forceCodeSigning"])
+        self.assertEqual(config["directories"]["output"], "fixture-output")
+
     def test_installer_silent_arguments_do_not_bind_codename(self):
         header = Path(__file__).with_name("build-installer-root.ps1").read_text().split("$ErrorActionPreference", 1)[0]
         with tempfile.TemporaryDirectory() as directory:
