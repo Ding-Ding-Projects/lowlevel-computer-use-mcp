@@ -430,8 +430,11 @@ def _vk_for(name: str) -> int:
 
 
 def _key_lparams(vk: int) -> tuple[int, int]:
-    scan = user32.MapVirtualKeyW(vk, 0)
-    down = 1 | (scan << 16)
+    # MAPVK_VK_TO_VSC_EX preserves E0 so navigation keys are not interpreted
+    # as numeric-keypad keys. The prefix belongs in bit 24, not scan-code bits.
+    scan = user32.MapVirtualKeyW(vk, 4)
+    extended = (1 << 24) if (scan & 0xFF00) == 0xE000 else 0
+    down = 1 | ((scan & 0xFF) << 16) | extended
     up = down | (0x3 << 30)  # transition + previous-state bits
     return down, up
 

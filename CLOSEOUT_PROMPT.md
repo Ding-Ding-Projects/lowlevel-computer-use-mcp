@@ -54,3 +54,7 @@ new automatic publication caused by its own push is a separate result and must
 be read back before being claimed. Preserve the active isolated recovery branch,
 all original packages and private ignored announcement variants. Installation,
 update lifecycle and packaged runtime remain separate unfinished work.
+
+## Current background navigation repair
+
+Preserve and verify the E0 scan-code fix in winio.py and tests/test_navigation_keys.py. Three focused tests pass; exact build and rebuilt-server runtime evidence remain pending. This narrow repair supports Material System Care minimum-size keyboard verification.

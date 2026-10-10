@@ -810,3 +810,5 @@ See the [verification summary](docs/features/releases/verification-1fe2.json) an
 [current handoff](HANDOFF.md) for prior failures, exact hashes and limits.
 Installation/update lifecycle, optional generated catalog packaging, packaged
 runtime, fresh-machine bootstrap and actual release/publication remain unverified.
+
+Background navigation keys preserve enhanced-key identity. See [behavior and verification](docs/features/automation/background-keys.md).

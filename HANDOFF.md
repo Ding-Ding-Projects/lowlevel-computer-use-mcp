@@ -194,3 +194,7 @@ unavailable in the exposed schema, so pinning is not claimed. The exact About
 homepage and live home/article HTTP 200 were verified. Wiki discovery was
 unavailable. Preserve every original producer, package and private announcement;
 no installed/shared helper cutover or deletion occurred.
+
+## Background navigation repair
+
+The sender now maps extended scan codes into the correct message flag. Three focused tests pass after thirteen assertions reproduced the prior behavior. Exact root build and rebuilt-server runtime verification remain pending. See docs/features/automation/background-keys.md.

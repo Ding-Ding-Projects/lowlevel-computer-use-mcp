@@ -79,3 +79,8 @@ Items remain proposals until code, tests, and release artifacts are linked from
 The native resize evidence does not prove physical 100-percent display scaling,
 native input, restart or a complete application feature matrix. Original consumer
 captures and all raw producer records remain private; tracked summaries are sanitized.
+
+## Background navigation input
+
+- [x] Preserve E0 extended-key identity and cover ordinary keys with focused regressions.
+- [ ] Verify rebuilt persistent-server navigation in a real hidden application.
