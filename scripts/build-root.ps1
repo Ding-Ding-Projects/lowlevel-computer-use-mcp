@@ -1,4 +1,9 @@
-param([switch]$BootstrapOnly)
+[CmdletBinding(PositionalBinding=$false)]
+param([switch]$BootstrapOnly, [switch]$Silent, [Parameter(ValueFromRemainingArguments=$true)][string[]]$RemainingArguments)
+foreach($argument in $RemainingArguments){
+ if($argument -notin @("/s","--silent")){throw "Unsupported argument: $argument"}
+ $Silent=$true
+}
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root

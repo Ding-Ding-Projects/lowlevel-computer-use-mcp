@@ -3,6 +3,8 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import json
+import subprocess
 
 spec = importlib.util.spec_from_file_location("installer", Path(__file__).with_name("package-installer.py"))
 installer = importlib.util.module_from_spec(spec)
@@ -10,6 +12,28 @@ spec.loader.exec_module(installer)
 
 
 class Controls(unittest.TestCase):
+    def test_installer_silent_arguments_do_not_bind_codename(self):
+        header = Path(__file__).with_name("build-installer-root.ps1").read_text().split("$ErrorActionPreference", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "arguments.ps1"
+            fixture.write_text(header + '\n@{codename=$ReleaseCodename;silent=[bool]$Silent}|ConvertTo-Json -Compress\n')
+            for arguments, expected in [(["/s"], ""), (["--silent"], ""),
+                                        (["/s", "-ReleaseCodename", "fixture.json"], "fixture.json")]:
+                run = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(fixture), *arguments], capture_output=True, text=True)
+                self.assertEqual(run.returncode, 0, run.stderr)
+                result = json.loads(run.stdout)
+                self.assertEqual(result["codename"], expected)
+                self.assertTrue(result["silent"])
+
+    def test_unknown_root_argument_rejected_before_bootstrap(self):
+        header = Path(__file__).with_name("build-installer-root.ps1").read_text().split("$ErrorActionPreference", 1)[0]
+        with tempfile.TemporaryDirectory() as directory:
+            fixture = Path(directory) / "arguments.ps1"
+            fixture.write_text(header + '\nWrite-Output "BOOTSTRAP_REACHED"\n')
+            run = subprocess.run(["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(fixture), "unexpected"], capture_output=True, text=True)
+            self.assertNotEqual(run.returncode, 0)
+            self.assertNotIn("BOOTSTRAP_REACHED", run.stdout)
+
     def test_signing_values_removed_only_from_child_copy(self):
         parent = {"CSC_LINK": "synthetic", "WIN_CSC_KEY_PASSWORD": "synthetic",
                   "Azure_Sign_Value": "synthetic", "PATH": "fixture", "GH_TOKEN": "synthetic"}

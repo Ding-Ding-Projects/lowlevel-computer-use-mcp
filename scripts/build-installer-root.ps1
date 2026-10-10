@@ -1,4 +1,9 @@
-param([string]$ReleaseCodename)
+[CmdletBinding(PositionalBinding=$false)]
+param([string]$ReleaseCodename, [switch]$Silent, [Parameter(ValueFromRemainingArguments=$true)][string[]]$RemainingArguments)
+foreach($argument in $RemainingArguments){
+ if($argument -notin @("/s","--silent")){throw "Unsupported argument: $argument"}
+ $Silent=$true
+}
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
