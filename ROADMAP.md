@@ -59,7 +59,7 @@ Items remain proposals until code, tests, and release artifacts are linked from
 - [x] Complete independent source reviews.
 - [x] Verify one source-bound owned native resize at DPI144/DPR1.5 and renderer 800x600.
 - [x] Complete exact root build/output verification and independent byte audit at 1fe2.
-- [ ] Integrate through the owning coordinator and verify the remote source.
+- [x] Integrate through the owning coordinator and verify the remote source at fb78adc.
 
 ## Installer entrypoint correction
 
@@ -71,10 +71,10 @@ Items remain proposals until code, tests, and release artifacts are linked from
 - [x] Run exact root build/installer entrypoints on 1fe2 and verify actual package bytes.
 - [x] Verify all 89 package entries, RELEASES consistency and unsigned project executables.
 - [x] Complete bounded independent package/privacy review with declared limits.
-- [ ] Exercise the optional generated catalog packaging path.
+- [x] Exercise optional generated catalog packaging in the actual cloud release at fb78adc.
 - [ ] Prove fresh-environment bootstrap separately from this existing-host run.
 - [ ] Verify installation/update lifecycle and packaged runtime in an authorized environment.
-- [ ] Verify an actual normal release, source binding, assets and measured workflow timing.
+- [x] Verify both actual normal releases at fb78adc, source binding, six assets each and workflow timing.
 
 The native resize evidence does not prove physical 100-percent display scaling,
 native input, restart or a complete application feature matrix. Original consumer

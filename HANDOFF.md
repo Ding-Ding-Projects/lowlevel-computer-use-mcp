@@ -166,3 +166,31 @@ Verification so far:
   issue and Discussion rather than predicted here.
 - The final audit found no stash entries. The main checkout retains its unrelated
   `software/docker.exe` modification; it is outside this task and was not staged.
+
+## Verified hidden-resize recovery and releases, 2026-10-10
+
+The bounded recovery is integrated and independently verified on main at
+fb78adc8065a41fd490e9abe29a264f3e77d85d3. Its isolated task branch remains in use
+by an active dependent capture and is retained. Both exact local root producers
+passed at 1fe2a321c22114dd921be9f27b51c0e97b4ace36, with 122 stable inputs and
+18,728 independently verified unique output paths. These historical results are
+not rebound to the later documentation revision.
+
+Both workflow publications are verified normal releases, with direct tags at
+fb78adc and all six expected assets checked by API hash, size and actual delivery:
+
+- https://github.com/Ding-Ding-Projects/lowlevel-computer-use-mcp/releases/tag/automation-38054417261-1
+- https://github.com/Ding-Ding-Projects/lowlevel-computer-use-mcp/releases/tag/automation-38054635110-1
+
+Distinct package bytes passed CRC/decompression and RELEASES consistency. Exact
+matching wheel, photo and packaged payload bytes were reused by hash. The actual
+cloud publication exercised the optional generated catalog path. Product
+executables are unsigned; vendor catalog signatures remain separate. Installation,
+update lifecycle, fresh-machine bootstrap and packaged runtime remain unverified.
+
+Issue 6 is completed after exact handoff readback. Discussion 7 preserves progress;
+Announcements Discussion 8 records the verified releases. PinDiscussionInput is
+unavailable in the exposed schema, so pinning is not claimed. The exact About
+homepage and live home/article HTTP 200 were verified. Wiki discovery was
+unavailable. Preserve every original producer, package and private announcement;
+no installed/shared helper cutover or deletion occurred.

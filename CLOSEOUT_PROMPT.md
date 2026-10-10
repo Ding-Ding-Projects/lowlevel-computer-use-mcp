@@ -22,6 +22,35 @@ Preserve earlier bootstrap, false installer nonapplicability, silent-argument an
 lost-config failures and every original evidence byte privately. Never commit
 full binary outputs, consumer identities, machine paths, announcements or secrets.
 The installed/shared helper remains unchanged. No install/update lifecycle,
-optional generated catalog packaging, packaged runtime, fresh-machine bootstrap,
-integration, remote release or publication is claimed. The coordinator owns
-integration/push and any actual release. Do not install or cut over helpers.
+packaged runtime or fresh-machine bootstrap is claimed. Do not install or cut over
+helpers. The isolated recovery checkout remains in use by an active consumer.
+
+## Verified delivery through source fb78adc
+
+Source fb78adc8065a41fd490e9abe29a264f3e77d85d3 is integrated into main and
+independently verified through git ls-remote. The task branch is preserved at
+that same source. Historical local producers remain bound to 1fe2, not this
+later documentation revision.
+
+Both normal releases are verified: automation-38054417261-1 and
+automation-38054635110-1. Both workflows succeeded, both releases are non-draft
+and non-prerelease, both direct tags resolve to fb78adc, and each supplies all six
+expected assets with verified API hashes, sizes and actual delivery. Distinct
+package bytes were inspected; exact matching wheel, photo and payload bytes were
+reused by hash. Main's full package passed 89-entry CRC/decompression and
+RELEASES SHA-1/141,152,258-byte consistency. Product executables are unsigned;
+two vendor catalog signatures remain a separate classification. The actual cloud
+release exercised optional generated catalog packaging.
+
+Issue 6 is closed as completed after exact handoff readback. Discussion 7 carries
+the progress handoff; Announcements Discussion 8 records these releases. The
+available GraphQL schema exposes no PinDiscussionInput, so no pin is claimed.
+The stored homepage is https://ding-ding-projects.github.io/lowlevel-computer-use-mcp/.
+Its live home and changed article returned HTTP 200; this is not a full browser
+accessibility or documentation-inventory audit. Wiki discovery was unavailable.
+
+This documentation update preserves the verified fb78adc release as history. A
+new automatic publication caused by its own push is a separate result and must
+be read back before being claimed. Preserve the active isolated recovery branch,
+all original packages and private ignored announcement variants. Installation,
+update lifecycle and packaged runtime remain separate unfinished work.
