@@ -59,3 +59,6 @@ Items remain proposals until code, tests, and release artifacts are linked from
 - [ ] Obtain two independent source reviews.
 - [ ] Verify authorized hidden-target geometry.
 - [ ] Integrate through owning coordinator.
+
+- [x] Reject observed current input desktops and attempt all worker restorations independently, with eleven focused controls and two deliberate red/restored-green witnesses.
+- [ ] Complete renewed root producer and independent acceptance before target resizing.

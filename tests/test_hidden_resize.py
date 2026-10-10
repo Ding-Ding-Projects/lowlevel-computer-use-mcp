@@ -12,12 +12,14 @@ class Fake:
     def __init__(self):
         self.calls = []; self.size = [10, 20, 810, 620]; self.alive = True
         self.ident = ("123456789", "c:\\fixture\\app.exe"); self.owner_ok = True
+        self.input_name = "Default"
     @contextmanager
     def process(self, pid):
         self.calls.append("open")
         try: yield 1
         finally: self.calls.append("close")
     def live(self, handle): return self.alive
+    def input_desktop_name(self): return self.input_name
     def identity(self, handle): return self.ident
     def owns_window(self, hwnd, pid): return self.owner_ok
     def geometry(self, hwnd): return {"outer": list(self.size), "client": [0, 0, 780, 560], "dpi": 144}
@@ -57,5 +59,45 @@ class Controls(unittest.TestCase):
         a=Fake()
         with self.assertRaises(m.ResizeRejected):m.resize_bound(self.r,a,lambda:True)
         self.assertNotIn("resize",a.calls)
+
+    def test_active_desktop_rejected_without_dispatch(self):
+        a=Fake();a.input_name="owned-test";self.reject(self.r,a)
+
+    def test_input_desktop_probe_failure_without_dispatch(self):
+        a=Fake()
+        def fail():raise m.ResizeRejected("INPUT_DESKTOP_UNAVAILABLE")
+        a.input_desktop_name=fail;self.reject(self.r,a)
+
+    def test_native_input_probe_uses_read_only_exact_name_and_closes(self):
+        a=object.__new__(m.Native);calls=[]
+        def opened(flags,inherit,rights):
+            calls.append(("open",flags,inherit,rights));return 9
+        def info(handle,index,text,length,needed):
+            calls.append(("info",handle,index));text.value="Owned-Test";return True
+        a.open_input=opened;a.object_info=info
+        a.close_desktop=lambda handle:calls.append(("close",handle)) or True
+        self.assertEqual(a.input_desktop_name(),"Owned-Test")
+        self.assertEqual(calls,[("open",0,False,1),("info",9,2),("close",9)])
+        calls.clear()
+        a.object_info=lambda *args:(_ for _ in ()).throw(m.ResizeRejected("probe"))
+        with self.assertRaises(m.ResizeRejected):a.input_desktop_name()
+        self.assertEqual(calls,[("open",0,False,1),("close",9)])
+
+    def test_each_cleanup_fault_still_attempts_every_stage(self):
+        class Cleanup:
+            def __init__(self,fail):self.fail=fail;self.calls=[]
+            def call(self,name):
+                self.calls.append(name)
+                if self.fail==name:raise m.ResizeRejected(name)
+                return True
+            def check(self,ok):
+                if not ok:raise m.ResizeRejected("native")
+            def set_dpi(self,context):return self.call("dpi-restore")
+            def set_desktop(self,desktop):return self.call("desktop-restore")
+            def close_desktop(self,desktop):return self.call("desktop-close")
+        for stage in [None,"dpi-restore","desktop-restore","desktop-close"]:
+            a=Cleanup(stage);errors=m.cleanup_worker(a,1,2,3)
+            self.assertEqual(a.calls,["dpi-restore","desktop-restore","desktop-close"])
+            self.assertEqual([e["stage"] for e in errors],[] if stage is None else [stage])
 
 if __name__ == "__main__": unittest.main()

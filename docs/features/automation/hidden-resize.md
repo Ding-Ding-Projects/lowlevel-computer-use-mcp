@@ -12,6 +12,9 @@ named desktop in the current window station. Default, Winlogon and Disconnect ar
 It attaches its own thread, enumerates only that desktop and matches exact HWND/native PID.
 A retained query/synchronize process handle validates exact decimal FILETIME and executable
 path before and after dispatch. Missing desktop, stale geometry and changed identity fail closed.
+Before dispatch and throughout observation, OpenInputDesktop and GetUserObjectInformationW
+read the current input desktop name. A matching name or unavailable probe rejects the operation.
+This checks observed state; it cannot atomically prevent an external desktop switch after a check.
 
 Per-monitor-v2 DPI awareness plus SetWindowPos NOMOVE, NOZORDER, NOACTIVATE, NOOWNERZORDER and
 ASYNCWINDOWPOS preserve requested position, activation and ordering. No show/hide, foreground,
@@ -20,6 +23,8 @@ seconds. Outer/client rectangles and native DPI are separate physical-pixel fact
 minimum size or unprocessed request is unsuccessful. An asynchronous request is not rolled back
 on timeout. The six-second worker timeout does not prove that no request was applied.
 The worker restores its original thread desktop/DPI context and closes owned handles.
+Each restoration is attempted independently. A failed DPI restore cannot skip desktop restore
+or desktop close, and any restoration failure prevents a successful result.
 
 `build.bat` bootstraps hash-pinned uv 0.9.5, locked dependencies and Python 3.13.15 into this
 checkout only, emits a wheel and compiles bytecode. The ctypes worker requires no additional C++
@@ -28,8 +33,10 @@ binary. The existing optional native producer remains scripts/build-native.ps1.
 the client-registration GUI is not such an installer.
 
 `python tests/test_hidden_resize.py` exercises request, identity, exact desktop ownership,
-stale geometry, deadline and positive dispatch with a fake adapter. These are source controls,
-not kernel/application acceptance. Independent review and source/output binding precede any
+stale geometry, deadline and positive dispatch with a fake adapter, including active-desktop rejection with zero dispatch, native input-name API boundary checks,
+and continuation after each individual restoration fault. Eleven controls pass; deliberate
+active-desktop omission and premature cleanup termination each fail before exact restoration.
+These are source controls, not kernel/application acceptance. Independent review and source/output binding precede any
 actual resize. No installed cutover is part of this recovery.
 
 Primary contracts: [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos),

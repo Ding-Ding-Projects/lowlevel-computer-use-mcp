@@ -39,6 +39,8 @@ def resize_bound(r, api, canceled=lambda: False):
         def verify():
             if canceled():
                 raise ResizeRejected("DEADLINE")
+            if api.input_desktop_name().casefold() == r["desktop_name"].casefold():
+                raise ResizeRejected("TARGET_IS_CURRENT_INPUT_DESKTOP")
             if not api.live(process) or api.identity(process) != (r["creation_filetime"], r["executable_path"].casefold()):
                 raise ResizeRejected("PROCESS_IDENTITY_MISMATCH")
             if not api.owns_window(r["handle"], r["pid"]):
@@ -77,6 +79,8 @@ class Native:
         self.open_desktop = bind(self.u, "OpenDesktopW", [W.LPCWSTR, W.DWORD, W.BOOL, W.DWORD], H)
         self.set_desktop = bind(self.u, "SetThreadDesktop", [H], W.BOOL)
         self.close_desktop = bind(self.u, "CloseDesktop", [H], W.BOOL)
+        self.open_input = bind(self.u, "OpenInputDesktop", [W.DWORD, W.BOOL, W.DWORD], H)
+        self.object_info = bind(self.u, "GetUserObjectInformationW", [H, ctypes.c_int, W.LPVOID, W.DWORD, ctypes.POINTER(W.DWORD)], W.BOOL)
         self.thread_desktop = bind(self.u, "GetThreadDesktop", [W.DWORD], H)
         self.thread_id = bind(self.k, "GetCurrentThreadId", [], W.DWORD)
         self.callback_type = ctypes.WINFUNCTYPE(W.BOOL, W.HWND, W.LPARAM)
@@ -113,6 +117,16 @@ class Native:
     def live(self, handle):
         return self.wait(handle, 0) == 258
 
+    def input_desktop_name(self):
+        handle = self.open_input(0, False, 1); self.check(handle)
+        try:
+            text = ctypes.create_unicode_buffer(32768); needed = W.DWORD()
+            self.check(self.object_info(handle, 2, text, ctypes.sizeof(text), ctypes.byref(needed)))
+            if not text.value: raise ResizeRejected("INPUT_DESKTOP_NAME_UNAVAILABLE")
+            return text.value
+        finally:
+            self.check(self.close_desktop(handle))
+
     def identity(self, handle):
         ts = [W.FILETIME() for _ in range(4)]
         self.check(self.times(handle, *(ctypes.byref(t) for t in ts)))
@@ -146,6 +160,20 @@ class Native:
         self.check(self.set_pos(hwnd, None, 0, 0, width, height, 0x4216))
 
 
+def cleanup_worker(api, old_dpi, original_desktop, desktop):
+    """Attempt every owned restoration independently, retaining every failure."""
+    errors = []
+    actions = []
+    if api and old_dpi: actions.append(("dpi-restore", lambda: api.check(api.set_dpi(old_dpi))))
+    if api and desktop:
+        actions.append(("desktop-restore", lambda: api.check(api.set_desktop(original_desktop))))
+        actions.append(("desktop-close", lambda: api.check(api.close_desktop(desktop))))
+    for stage, action in actions:
+        try: action()
+        except Exception as exc: errors.append({"stage": stage, "type": type(exc).__name__})
+    return errors
+
+
 def resize_hidden_window(request):
     validate_request(request)
     if os.name != "nt":
@@ -164,13 +192,10 @@ def resize_hidden_window(request):
         except Exception as exc:
             result["error"] = exc
         finally:
-            try:
-                if api and old_dpi: api.check(api.set_dpi(old_dpi))
-                if api and desktop:
-                    api.check(api.set_desktop(original_desktop))
-                    api.check(api.close_desktop(desktop))
-            except Exception as exc:
-                result["error"] = exc
+            errors = cleanup_worker(api, old_dpi, original_desktop, desktop)
+            result["cleanup"] = errors
+            if errors:
+                result["error"] = ResizeRejected("WORKER_CLEANUP_INCOMPLETE:" + ",".join(e["stage"] for e in errors))
     t = threading.Thread(target=worker, daemon=True); t.start(); t.join(6)
     if t.is_alive():
         canceled.set()
