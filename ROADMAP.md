@@ -62,3 +62,11 @@ Items remain proposals until code, tests, and release artifacts are linked from
 
 - [x] Reject observed current input desktops and attempt all worker restorations independently, with eleven focused controls and two deliberate red/restored-green witnesses.
 - [ ] Complete renewed root producer and independent acceptance before target resizing.
+
+## Installer entrypoint correction
+
+- [x] Replace the incorrect unsupported entrypoint with the existing Squirrel producer and isolated bootstrap.
+- [x] Correct release routing and retain safe failed-producer outputs.
+- [ ] Complete two independent source reviews.
+- [ ] Run corrected root build and installer entrypoints and inspect unsigned package consistency.
+- [ ] Verify actual release assets, source binding and timing separately from installed runtime.

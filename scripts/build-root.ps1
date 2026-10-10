@@ -1,3 +1,4 @@
+param([switch]$BootstrapOnly)
 $ErrorActionPreference='Stop'
 $root=Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
@@ -19,6 +20,7 @@ $uv=Get-ChildItem -LiteralPath $unpacked -Recurse -Filter uv.exe | Select-Object
 if(-not $uv){throw 'Pinned uv executable is absent'}
 & $uv sync --frozen --python 3.13.15
 if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
+if($BootstrapOnly){exit 0}
 & $uv build --wheel
 if($LASTEXITCODE -ne 0){exit $LASTEXITCODE}
 & (Join-Path $root '.venv/Scripts/python.exe') -m compileall -q src/lowlevel_computer_use_mcp

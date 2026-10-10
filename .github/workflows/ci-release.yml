@@ -1,7 +1,8 @@
-name: Test and publish release
+name: Build and publish release
 
 on:
   push:
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -12,99 +13,90 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  test:
-    name: Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - name: Install Ubuntu GUI test dependency
-        if: matrix.os == 'ubuntu-latest'
-        run: sudo apt-get update && sudo apt-get install --yes python3-tk
-      - name: Sync locked environment
-        run: uv sync --frozen
-      - name: Run unit suite
-        run: uv run python -m unittest discover -s tests -v
-
-  electron:
-    name: Build Electron Windows installer
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: electron/package-lock.json
-      - name: Resolve public release code name
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
-        run: |
-          $catalog = Join-Path $env:RUNNER_TEMP 'dim-sum-catalog.json'
-          $used = Join-Path $env:RUNNER_TEMP 'used-release-notes.txt'
-          gh api -H 'Accept: application/vnd.github.raw+json' repos/Ding-Ding-Projects/dim-sum-photos/contents/catalog/index.json | Out-File -LiteralPath $catalog -Encoding utf8
-          gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].body' | Out-File -LiteralPath $used -Encoding utf8
-          python scripts/resolve_release_codename.py --catalog $catalog --used-notes $used --output electron/release-codename.json
-      - name: Install Electron dependencies
-        run: npm ci --prefix electron
-      - name: Check Electron source
-        run: npm run check --prefix electron
-      - name: Build Squirrel.Windows installer
-        run: npm run package --prefix electron
-      - name: Upload Electron installer bundle
-        uses: actions/upload-artifact@v4
-        with:
-          name: electron-windows-${{ github.sha }}
-          path: electron/dist/squirrel-windows/*
-          if-no-files-found: error
-
   release:
-    name: Build wheel and publish one release
-    needs: [test, electron]
-    runs-on: ubuntu-latest
+    name: Build unsigned Windows packages and publish one release
+    if: github.event_name != 'push' || github.event.deleted == false
+    runs-on: windows-2025
     env:
-      GH_TOKEN: ${{ github.token }}
+      GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: astral-sh/setup-uv@v6
-      - name: Resolve public release code name
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
+      - name: Build Python package through root bootstrap
+        shell: pwsh
         run: |
-          catalog="$RUNNER_TEMP/dim-sum-catalog.json"
-          used="$RUNNER_TEMP/used-release-notes.txt"
-          gh api -H 'Accept: application/vnd.github.raw+json' repos/Ding-Ding-Projects/dim-sum-photos/contents/catalog/index.json > "$catalog"
-          gh api "repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].body' > "$used"
-          python scripts/resolve_release_codename.py --catalog "$catalog" --used-notes "$used" --output "$RUNNER_TEMP/release-codename.json"
-      - name: Download Electron installer bundle
-        uses: actions/download-artifact@v4
+          New-Item -ItemType Directory -Force .agent/build-logs | Out-Null
+          & .\build.bat 2>&1 | Tee-Object .agent/build-logs/build.log
+          exit $LASTEXITCODE
+      - name: Resolve bundled release code name outside source
+        shell: pwsh
+        run: |
+          $used = Join-Path $env:RUNNER_TEMP 'used-release-notes.txt'
+          $notes = gh api "repos/$env:GITHUB_REPOSITORY/releases?per_page=100" --jq '.[].body'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $notes | Set-Content -LiteralPath $used -Encoding utf8
+          & .venv/Scripts/python.exe scripts/resolve_release_codename.py --catalog docs/features/releases/catalog/index.json --used-notes $used --output "$env:RUNNER_TEMP/release-codename.json"
+          exit $LASTEXITCODE
+      - name: Build unsigned Squirrel installer through root entrypoint
+        shell: pwsh
+        run: |
+          & .\build-installer.bat -ReleaseCodename "$env:RUNNER_TEMP/release-codename.json" 2>&1 | Tee-Object .agent/build-logs/installer.log
+          exit $LASTEXITCODE
+      - name: Publish unique normal release
+        shell: pwsh
+        run: |
+          $receipts = @(Get-ChildItem dist/installer -Recurse -Filter receipt.json)
+          if ($receipts.Count -ne 1) { throw 'Expected exactly one current installer receipt' }
+          $receipt = Get-Content -Raw $receipts[0].FullName | ConvertFrom-Json
+          if ($receipt.exitCode -ne 0 -or -not $receipt.sourceUnchanged -or $receipt.source -cne $env:GITHUB_SHA) { throw 'Installer receipt does not bind current source' }
+          $codename = Get-Content -Raw "$env:RUNNER_TEMP/release-codename.json" | ConvertFrom-Json
+          $started = gh api "repos/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID/jobs" --jq '[.jobs[].started_at] | min'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $workflowStart = [DateTimeOffset]::Parse($started)
+          $tag = "automation-$env:GITHUB_RUN_ID-$env:GITHUB_RUN_ATTEMPT"
+          $notes = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+          & .venv/Scripts/python.exe scripts/count_lines.py --markdown | Set-Content -LiteralPath $notes -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $photo = 'docs/features/releases/catalog/hk-dish-0001-classic-har-gow.png'
+          & .venv/Scripts/python.exe -c "from PIL import Image; Image.open('$photo').verify()"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Add-Content -LiteralPath $notes -Encoding utf8 -Value "`nCode name: $($codename.codeName)`nSource commit: $env:GITHUB_SHA`nCatalog photo: Classic Har Gow, hk-dish-0001-classic-har-gow.png`n`nThe Windows Squirrel assets are unsigned and may trigger unknown-publisher or SmartScreen warnings. No workflow tests or lint were run. Package production does not prove installed runtime acceptance."
+          $assets = @((Get-ChildItem dist -Filter '*.whl').FullName) + @($receipt.assets | ForEach-Object { Join-Path $env:GITHUB_WORKSPACE $_.path }) + @($photo)
+          gh release create $tag @assets --target $env:GITHUB_SHA --title "Automated release $env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT" --notes-file $notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $completed = [DateTimeOffset]::UtcNow
+          $duration = ($completed - $workflowStart).ToString('hh\:mm\:ss')
+          Add-Content -LiteralPath $notes -Encoding utf8 -Value "`nWorkflow started: $($workflowStart.ToString('yyyy-MM-ddTHH:mm:ssZ'))`nWorkflow completed: $($completed.ToString('yyyy-MM-ddTHH:mm:ssZ'))`nWorkflow duration: $duration"
+          gh release edit $tag --notes-file $notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $release = gh release view $tag --json isDraft,isPrerelease,assets
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $release | Set-Content .agent/build-logs/release.json -Encoding utf8
+          $proof = $release | ConvertFrom-Json
+          if ($proof.isDraft -or $proof.isPrerelease) { throw 'Release must be normal' }
+          $target = gh api "repos/$env:GITHUB_REPOSITORY/git/ref/tags/$tag" --jq '.object.type + ":" + .object.sha'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if ($target -cne "commit:$env:GITHUB_SHA") { throw 'Release tag source mismatch' }
+          $expected = @($assets | ForEach-Object { Split-Path -Leaf $_ })
+          foreach ($name in $expected) { if ($name -notin $proof.assets.name) { throw "Missing release asset: $name" } }
+      - name: Collect safe producer context even after failure
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .agent/build-logs | Out-Null
+          @{ source=$env:GITHUB_SHA; runId=$env:GITHUB_RUN_ID; jobStatus='${{ job.status }}'; runnerOs=$env:RUNNER_OS; runnerArch=$env:RUNNER_ARCH } | ConvertTo-Json | Set-Content .agent/build-logs/context.json -Encoding utf8
+      - name: Retain safe outputs even after failure
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
         with:
-          name: electron-windows-${{ github.sha }}
-          path: electron-artifacts
-      - name: Build installable artifacts
-        run: uv build
-      - name: Count release lines
-        run: python scripts/count_lines.py --markdown > line-count.md
-      - name: Publish uniquely tagged release
-        shell: bash
-        env:
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.ORG_TOKEN || github.token }}
-        run: |
-          tag="automation-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          notes_file="$RUNNER_TEMP/release-notes.md"
-          code_name=$(python -c 'import json, os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "release-codename.json"), encoding="utf-8"))["codeName"])')
-          image_url=$(python -c 'import json, os; print(json.load(open(os.path.join(os.environ["RUNNER_TEMP"], "release-codename.json"), encoding="utf-8")).get("imageUrl") or "")')
-          cat line-count.md > "$notes_file"
-          printf '\n\nCode name: %s\nCatalog photo: %s\n\nTests passed on Windows and Linux for commit %s. The Electron Windows Squirrel installer bundle was built by the Windows runner.\n' "$code_name" "${image_url:-unavailable}" "$GITHUB_SHA" >> "$notes_file"
-          gh release create "$tag" dist/* electron-artifacts/* \
-            --target "$GITHUB_SHA" \
-            --title "Automated release ${GITHUB_RUN_ID}.${GITHUB_RUN_ATTEMPT}" \
-            --notes-file "$notes_file"
+          name: windows-producer-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            .agent/build-logs/*
+            dist/*.whl
+            dist/installer/*/receipt.json
+            dist/installer/*/payload/squirrel-windows/*
+          if-no-files-found: warn
+          retention-days: 7

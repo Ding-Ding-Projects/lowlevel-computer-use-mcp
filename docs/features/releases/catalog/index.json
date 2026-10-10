@@ -1,0 +1,41 @@
+{
+  "schemaVersion": "1.0.0",
+  "dishes": [
+    {
+      "id": "hk-dish-0001",
+      "slug": "classic-har-gow",
+      "name": {
+        "en": "Classic Har Gow",
+        "zhHant": "蝦餃"
+      },
+      "jyutping": "haa1 gaau2",
+      "category": "steamed-dim-sum",
+      "subcategory": "steamed shrimp dumpling",
+      "description": {
+        "en": "Classic Har Gow is a steamed shrimp dumpling made with shrimp, wheat starch, tapioca starch, bamboo shoot, sesame oil and served as four translucent pleated dumplings in a bamboo steamer.",
+        "yue": "蝦餃係香港茶樓常見嘅蒸餃，講究皮薄餡鮮，通常放喺竹籠趁熱上枱。"
+      },
+      "ingredients": [
+        "shrimp",
+        "wheat starch",
+        "tapioca starch",
+        "bamboo shoot",
+        "sesame oil"
+      ],
+      "dietaryTags": [],
+      "allergens": [
+        "shellfish",
+        "gluten",
+        "sesame"
+      ],
+      "image": {
+        "path": "images/hk-dish-0001-classic-har-gow.png",
+        "alt": {
+          "en": "Warm tea-house photograph of Classic Har Gow",
+          "yue": "港式茶樓木枱上嘅蝦餃"
+        }
+      },
+      "imagePrompt": "Use case: product-mockup\nAsset type: square dim-sum catalog food photograph\nPrimary request: an original, appetizing photograph of Classic Har Gow (蝦餃), featuring shrimp, wheat starch, tapioca starch, bamboo shoot, sesame oil; present it as four translucent pleated dumplings in a bamboo steamer\nScene/backdrop: warm Hong Kong tea-house tabletop of dark honey-toned wood, understated and uncluttered\nSubject: only the specified Classic Har Gow; ingredients and traditional presentation must be visually accurate\nStyle/medium: photorealistic natural food photography, premium but believable restaurant presentation\nComposition/framing: square 1:1, close three-quarter overhead view, dish centered, full serving visible, generous clean margins\nLighting/mood: warm window light, soft natural shadows, inviting yum-cha atmosphere\nColor palette: natural ingredient colours, warm wood, restrained porcelain or bamboo serving ware\nMaterials/textures: realistic food texture, natural wood grain, believable bamboo or porcelain\nConstraints: one distinct dish only; culturally accurate Hong Kong Cantonese presentation; no people; no hands; no text; no menus; no logos; no watermark; no decorative lettering\nAvoid: multiple dishes, plastic-looking food, excessive garnish, fusion styling, duplicate serving vessels, cropped dish, illustration, CGI"
+    }
+  ]
+}

@@ -29,8 +29,8 @@ or desktop close, and any restoration failure prevents a successful result.
 `build.bat` bootstraps hash-pinned uv 0.9.5, locked dependencies and Python 3.13.15 into this
 checkout only, emits a wheel and compiles bytecode. The ctypes worker requires no additional C++
 binary. The existing optional native producer remains scripts/build-native.ps1.
-`build-installer.bat` exits 2 because no genuine supported Squirrel installer target exists;
-the client-registration GUI is not such an installer.
+`build-installer.bat` packages the existing manual client through its real Squirrel.Windows
+target. It is separate from the Python client-registration GUI. See the [installer producer](../releases/README.md).
 
 `python tests/test_hidden_resize.py` exercises request, identity, exact desktop ownership,
 stale geometry, deadline and positive dispatch with a fake adapter, including active-desktop rejection with zero dispatch, native input-name API boundary checks,

@@ -793,3 +793,7 @@ are never persisted or transmitted. See [regex builder documentation](docs/featu
 ## License
 
 MIT
+
+## Reproducible Windows package producers
+
+Run `build.bat` for the isolated locked Python wheel and `build-installer.bat` for the existing manual-client Squirrel.Windows installer. Both bootstrap their required tools without modifying another environment. Packaging is unsigned and may trigger unknown-publisher or SmartScreen warnings. See [producer details and verification limits](docs/features/releases/README.md).

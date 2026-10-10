@@ -1,3 +1,3 @@
 @echo off
-echo No Squirrel installer producer is supported by this repository. The existing setup GUI configures clients and is not an application installer.
-exit /b 2
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\build-installer-root.ps1" %*
+exit /b %errorlevel%
