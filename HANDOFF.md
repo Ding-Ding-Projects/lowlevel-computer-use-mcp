@@ -107,3 +107,9 @@ Verification so far:
 # Hidden resize recovery
 
 Isolated source and fake-adapter controls add exact named-desktop resize without changing ordinary resize. Installed editable runtime and active captures remain untouched. Root build/output review and two independent source reviews precede actual resizing. Kernel geometry, application behavior and installed cutover remain unverified. The coordinator owns integration and pushes.
+
+## Verified producer boundary
+
+Exact root build.bat at df157d7c0467365b1b64738edbf0b735dbb2660b exited 0 with unchanged tracked input hashes. The emitted 18-entry wheel passed CRC and exact worker/server byte comparison; SHA-256 is 364d79e50ef9e2a7f94607e69c5b93f7b6f399daea7bb78068b531c8c1e5d641. The isolated cheap CLI catalog returned 0 and includes resize_hidden_window. Seven adapter controls passed; deliberate native-identity omission failed and exact restoration passed. These do not prove kernel resizing.
+
+The first d6c5697 root producer failed because Get-FileHash was unavailable; its raw log remains retained separately. Module-independent .NET hashing/archive extraction repaired that bootstrap. Exact build-installer.bat returns 2 for documented nonapplicability. The existing installed runtime inventory retained 15 source/native/entrypoint files with zero byte mismatches. Independent source reviews and actual owned target geometry remain pending. All raw producer and negative receipts remain in the owner-only external verification ledger.

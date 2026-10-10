@@ -55,7 +55,7 @@ Items remain proposals until code, tests, and release artifacts are linked from
 - [x] Add exact-desktop native-incarnation source operation.
 - [x] Preserve ordinary resize and avoid activation/discovery/termination.
 - [x] Add focused fake-native controls.
-- [ ] Verify isolated root build and output hashes.
+- [x] Verify isolated root build and output hashes (source df157d7, exact build.bat exit 0, emitted wheel inspected).
 - [ ] Obtain two independent source reviews.
 - [ ] Verify authorized hidden-target geometry.
 - [ ] Integrate through owning coordinator.
