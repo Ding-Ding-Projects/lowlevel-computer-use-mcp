@@ -10,15 +10,15 @@ Set-Location -LiteralPath $root
 if(-not [Environment]::Is64BitOperatingSystem){throw 'Windows x64 is required'}
 $cache=Join-Path $root '.bootstrap'
 New-Item -ItemType Directory -Force -Path $cache | Out-Null
-$archive=Join-Path $cache 'uv-0.9.5.zip'
-$expected='48a12390421f91af8a8993cf15c38297c0bb121936046286e287975b2fbf1789'
+$archive=Join-Path $cache 'uv-0.12.20.zip'
+$expected='1502e03f4da3280cbb493d356d59bdd401bf23197cd71df64e1c6feac156090c'
 if(-not(Test-Path -LiteralPath $archive)){
- Invoke-WebRequest -UseBasicParsing 'https://files.pythonhosted.org/packages/af/14/0f07d0b2e561548b4e3006208480a5fce8cdaae5247d85efbfb56e8e596b/uv-0.9.5-py3-none-win_amd64.whl' -OutFile $archive
+ Invoke-WebRequest -UseBasicParsing 'https://files.pythonhosted.org/packages/1f/72/c98ecbe0c4dbaf9118776053688a43dfca5708d86223cf3aa5d38066df21/uv-0.12.20-py3-none-win_amd64.whl' -OutFile $archive
 }
 $sha=[Security.Cryptography.SHA256]::Create()
 try{$actual=[BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($archive))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
 if($actual -cne $expected){throw 'Pinned uv archive hash mismatch'}
-$unpacked=Join-Path $cache ('uv-0.9.5-'+[Guid]::NewGuid().ToString('N'))
+$unpacked=Join-Path $cache ('uv-0.12.20-'+[Guid]::NewGuid().ToString('N'))
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 [IO.Compression.ZipFile]::ExtractToDirectory($archive,$unpacked)
 $uv=Get-ChildItem -LiteralPath $unpacked -Recurse -Filter uv.exe | Select-Object -First 1 -ExpandProperty FullName

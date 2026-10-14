@@ -26,7 +26,7 @@ The worker restores its original thread desktop/DPI context and closes owned han
 Each restoration is attempted independently. A failed DPI restore cannot skip desktop restore
 or desktop close, and any restoration failure prevents a successful result.
 
-`build.bat` bootstraps hash-pinned uv 0.9.5, locked dependencies and Python 3.13.15 into this
+`build.bat` bootstraps hash-pinned uv 0.12.20, locked dependencies and Python 3.13.15 into this
 checkout only, emits a wheel and compiles bytecode. The ctypes worker requires no additional C++
 binary. The existing optional native producer remains scripts/build-native.ps1.
 `build-installer.bat` packages the existing manual client through its real Squirrel.Windows
